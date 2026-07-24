@@ -23,6 +23,6 @@
   ['room-width','room-length','room-height'].forEach(id => document.getElementById(id)?.addEventListener('input', calculate)); calculate();
 
   // The section gets its own cinematic enter state without holding up the page.
-  const section = $('#shockwave'); if (section) { const observer = new IntersectionObserver(entries => entries.forEach(entry => { if (entry.isIntersecting) { section.classList.add('shockwave-entered'); observer.disconnect(); } }), { threshold: .1 }); observer.observe(section); $('.desktop-nav')?.insertAdjacentHTML('beforeend', '<a href="#shockwave">Shockwave</a>'); }
+  const section = $('#shockwave'); if (section) { const observer = new IntersectionObserver(entries => entries.forEach(entry => { if (entry.isIntersecting) { section.classList.add('shockwave-entered'); observer.disconnect(); } }), { threshold: .1 }); observer.observe(section); $('.desktop-nav')?.insertAdjacentHTML('beforeend', '<a href="#shockwave-hq">Shockwave</a>'); }
   data.then(payload => { if (!payload) return; const process = $('.process-track'); if (process) process.textContent = payload.process.join('  →  '); });
 })();
