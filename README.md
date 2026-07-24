@@ -1,6 +1,6 @@
 # Nizamuddin Ali Ahmed — Portfolio
 
-Android Engineering Command Center: a dark OLED digital operating system for Nizamuddin Ali Ahmed, Senior Android Engineer. Built as a fast static site with semantic HTML5, Bootstrap 5 utilities, modular CSS, vanilla JavaScript, AOS, Typed.js, Swiper assets, and Bootstrap Icons.
+NEXUS — Engineering Command Center: a dark OLED engineering universe for Nizamuddin Ali Ahmed, where Android software, audio systems, AI research, product concepts, open source, and experiments live under one system. Built as a fast static site with semantic HTML5, Bootstrap 5 utilities, modular CSS, vanilla JavaScript, AOS, Typed.js, Swiper assets, and Bootstrap Icons.
 
 ## Features
 
@@ -14,6 +14,7 @@ Android Engineering Command Center: a dark OLED digital operating system for Niz
 - Content model in `data/profile.json`, `data/projects.json`, `data/experience.json`, `data/skills.json`, `data/articles.json`, and `data/socials.json`
 - PWA service worker, offline fallback, 404 page, GitHub Pages config, Netlify config, Vercel config, and security headers
 - Project Shockwave flagship case study: hybrid immersive audio system, room blueprint, signal-flow architecture, hardware modules, acoustic comparison, engineering dashboard, cost model, calculator, challenges, and roadmap
+- Nexus departments: Software Engineering, Audio Engineering, AI Research Lab, Product Lab, Open Source, Engineering Journal, Experiments, Living Timeline, and Roadmap
 
 ## Structure
 
