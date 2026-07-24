@@ -1,0 +1,26 @@
+{
+  "title":"Project Shockwave",
+  "subtitle":"Hybrid Immersive Audio Engineering Platform",
+  "tagline":"Engineering cinematic audio experiences for everyone.",
+  "mission":"Engineer an affordable cinematic audio platform using off-the-shelf hardware.",
+  "problem":"Commercial systems are expensive. Many middle-class families cannot justify premium home theater pricing.",
+  "objective":"Deliver premium room-filling audio using intelligent engineering instead of expensive branded ecosystems.",
+  "process":["Research","Room Measurement","Acoustic Planning","Component Selection","Power Calculations","Signal Routing","Installation","Calibration","Testing","Optimization"],
+  "modules":[
+    {"name":"Television","role":"Media Source","status":"CONNECTED","spec":"55-inch display"},
+    {"name":"Audio Splitter","role":"Signal Routing","status":"STABLE","spec":"Digital → analog"},
+    {"name":"Amplifier","role":"Power Stage","status":"CALIBRATED","spec":"Hybrid multi-channel"},
+    {"name":"Passive Speakers","role":"Room Coverage","status":"4 ONLINE","spec":"Front + rear pair"},
+    {"name":"Subwoofer","role":"Low Frequency","status":"TUNED","spec":"Dedicated bass channel"},
+    {"name":"Power Supply","role":"Energy","status":"PROTECTED","spec":"Filtered mains"},
+    {"name":"Speaker Wiring","role":"Signal Integrity","status":"TESTED","spec":"Managed copper runs"},
+    {"name":"Cable Management","role":"Installation","status":"OPTIMIZED","spec":"Hidden routing"}
+  ],
+  "challenges":[
+    {"title":"Room acoustics","problem":"Reflections and standing waves can make an affordable system feel uneven.","analysis":"Map surfaces, listening position and bass accumulation before choosing placement.","solution":"Use symmetry, toe-in, listening-zone mapping and calibration passes.","result":"A wider, more even listening field without expensive acoustic treatment."},
+    {"title":"Cable routing","problem":"A living room cannot feel like a wiring closet.","analysis":"Signal and power paths need to be serviceable but invisible.","solution":"Plan the route before installation and separate signal from power runs.","result":"Clean installation with lower noise risk and easier maintenance."},
+    {"title":"Power budget","problem":"More channels do not automatically mean more usable headroom.","analysis":"Match amplifier behavior, speaker efficiency and realistic listening levels.","solution":"Size the system around the room and leave measured headroom.","result":"Punchy dynamics without wasteful or unsafe over-specification."},
+    {"title":"Component compatibility","problem":"Affordable hardware often speaks different signal languages.","analysis":"Trace every connector, format and conversion point.","solution":"Use an intentional splitter and validate each hand-off.","result":"Reliable source-to-speaker playback with minimal latency."}
+  ],
+  "roadmap":["Wireless Synchronization","Smartphone Control","Automatic Room Calibration","AI Powered Equalization","Multi-room Audio"]
+}

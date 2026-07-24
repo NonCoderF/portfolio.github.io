@@ -1,6 +1,6 @@
 # Nizamuddin Ali Ahmed — Portfolio
 
-Premium, dark-first portfolio for Nizamuddin Ali Ahmed, Senior Android Engineer. Built as a fast static site with semantic HTML5, Bootstrap 5 utilities, modular CSS, vanilla JavaScript, AOS, Typed.js, Swiper assets, and Bootstrap Icons.
+Android Engineering Command Center: a dark OLED digital operating system for Nizamuddin Ali Ahmed, Senior Android Engineer. Built as a fast static site with semantic HTML5, Bootstrap 5 utilities, modular CSS, vanilla JavaScript, AOS, Typed.js, Swiper assets, and Bootstrap Icons.
 
 ## Features
 
@@ -10,6 +10,10 @@ Premium, dark-first portfolio for Nizamuddin Ali Ahmed, Senior Android Engineer.
 - Animated counters, particles, scroll progress, AOS reveal, and typing role line
 - SEO metadata, Open Graph tags, JSON-LD Person schema, robots.txt, sitemap, and PWA manifest
 - Existing social links, resume, project names, experience, education, and technical information preserved
+- Engineer mode with boot sequence, OS dock, command palette, bounded engineering copilot, device lab, architecture flow, recruiter mode, easter eggs, and optional UI sound
+- Content model in `data/profile.json`, `data/projects.json`, `data/experience.json`, `data/skills.json`, `data/articles.json`, and `data/socials.json`
+- PWA service worker, offline fallback, 404 page, GitHub Pages config, Netlify config, Vercel config, and security headers
+- Project Shockwave flagship case study: hybrid immersive audio system, room blueprint, signal-flow architecture, hardware modules, acoustic comparison, engineering dashboard, cost model, calculator, challenges, and roadmap
 
 ## Structure
 
@@ -20,6 +24,10 @@ assets/js/        main interactions, particles, typing, and theme logic
 assets/img/       hero, profile, project, icon, and favicon assets
 assets/resume/    resume.pdf
 assets/vendor/    Bootstrap, Bootstrap Icons, AOS, Typed.js, Swiper, and original vendor assets
+data/             JSON-only portfolio content model
+sw.js             Offline cache and PWA service worker
+offline.html      Network fallback
+404.html          Static-host not-found route
 ```
 
 ## Run locally
@@ -34,7 +42,7 @@ Open `http://localhost:8000`.
 
 ## Customization
 
-Update the content in `index.html`, adjust design tokens at the top of `assets/css/main.css`, and replace CSS-art visuals with optimized assets under `assets/img/projects/` when available. The resume remains at `assets/resume/resume.pdf`.
+Update the JSON files in `data/` to change profile, projects, experience, skills, articles, and social destinations. The UI renders these datasets when served from a static server and keeps curated fallback markup when opened directly as `index.html`. Adjust design tokens at the top of `assets/css/main.css` or `assets/css/futuristic.css`. The resume remains at `assets/resume/resume.pdf`.
 
 ## Deployment
 
