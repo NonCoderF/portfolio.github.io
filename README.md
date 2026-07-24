@@ -15,6 +15,7 @@ NEXUS — Engineering Command Center: a dark OLED engineering universe for Nizam
 - PWA service worker, offline fallback, 404 page, GitHub Pages config, Netlify config, Vercel config, and security headers
 - Project Shockwave flagship case study: hybrid immersive audio system, room blueprint, signal-flow architecture, hardware modules, acoustic comparison, engineering dashboard, cost model, calculator, challenges, and roadmap
 - Shockwave Engineering HQ brand layer: company philosophy, engineering gap, digital room lab, product ecosystem, AI research vision, component database, educational stories, and seven-version roadmap
+- SonicBridge engineering case study: private TV audio over local Wi-Fi, Android capture/playback architecture, low-latency rationale, implementation approach, and related Shockwave vision
 - Nexus departments: Software Engineering, Audio Engineering, AI Research Lab, Product Lab, Open Source, Engineering Journal, Experiments, Living Timeline, and Roadmap
 
 ## Structure
