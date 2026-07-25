@@ -10,7 +10,7 @@ NEXUS — Engineering Command Center: a dark OLED engineering universe for Nizam
 - Animated counters, particles, scroll progress, AOS reveal, and typing role line
 - SEO metadata, Open Graph tags, JSON-LD Person schema, robots.txt, sitemap, and PWA manifest
 - Existing social links, resume, project names, experience, education, and technical information preserved
-- Engineer mode with boot sequence, OS dock, command palette, bounded engineering copilot, device lab, architecture flow, recruiter mode, easter eggs, and optional UI sound
+- Engineer mode with boot sequence, OS dock, command palette, bounded engineering copilot, device lab, architecture flow, easter eggs, and optional UI sound
 - Content model in `data/profile.json`, `data/projects.json`, `data/experience.json`, `data/skills.json`, `data/articles.json`, and `data/socials.json`
 - PWA service worker, offline fallback, 404 page, GitHub Pages config, Netlify config, Vercel config, and security headers
 - Project Shockwave flagship case study: hybrid immersive audio system, room blueprint, signal-flow architecture, hardware modules, acoustic comparison, engineering dashboard, cost model, calculator, challenges, and roadmap
