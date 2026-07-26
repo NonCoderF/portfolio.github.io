@@ -1,0 +1,72 @@
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.digital-nizam-grid {
+  display: grid;
+  grid-template-columns: 1.3fr .7fr;
+  gap: 18px;
+}
+
+.digital-nizam-grid .skill-card p,
+.faq-grid .skill-card p {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 0;
+}
+
+.project-index-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.project-index-grid .project-card {
+  min-height: 100%;
+}
+
+.faq-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.faq-grid .skill-card {
+  min-height: 0;
+}
+
+.faq-grid .skill-card h3 {
+  font-size: 16px;
+  line-height: 1.35;
+}
+
+.assistant-form input {
+  min-width: 0;
+}
+
+@media (max-width: 991px) {
+  .faq-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 767px) {
+  .digital-nizam-grid,
+  .project-index-grid,
+  .faq-grid {
+    grid-template-columns: 1fr;
+  }
+}
