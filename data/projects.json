@@ -1,9 +1,107 @@
 [
-  {"id":"archguard","name":"ArchGuard","type":"Open source / Gradle Plugin","status":"ONLINE","version":"Latest","description":"Kotlin and Gradle plugin for Android architecture validation, project structure checks, and clean module boundaries.","technologies":["Kotlin","Gradle","Static analysis","Android architecture"],"href":"https://github.com/NonCoderF/ArchGuard"},
-  {"id":"taporiai","name":"Tapori AI","type":"Android app","status":"PUBLISHED","version":"Latest","description":"Android chatbot experiment exploring conversational interfaces and local-first AI-assisted mobile interactions.","technologies":["Android","Kotlin","AI","Conversational UI"],"href":"https://play.google.com/store/apps/details?id=com.sparkstudios.tapori.ai.chatbot&hl=en_IN"},
-  {"id":"sally-launcher","name":"Sally Launcher","type":"Android app","status":"PUBLISHED","version":"Latest","description":"Custom Android launcher focused on a clean, smooth user experience and fast access to core phone actions.","technologies":["Android SDK","Kotlin","UX","Launcher"],"href":"https://play.google.com/store/apps/details?id=com.code.amiles.sally.free&hl=en_IN"},
-  {"id":"vantage-circle","name":"Vantage Circle","type":"Professional / Enterprise","status":"PRODUCTION","version":"2020 — 2026","description":"Enterprise employee engagement and rewards Android app.","technologies":["Jetpack Compose","MVVM","Apollo GraphQL","Material 3"],"href":"https://play.google.com/store/apps/details?id=com.bargaintechnologies.vantagecircle&hl=en_IN"},
-  {"id":"sonicbridge","name":"SonicBridge","type":"Android / Audio Engineering","status":"RESEARCH","version":"Latest","description":"Private TV audio over local Wi-Fi: a low-latency Android system for personal listening without cloud services or expensive hardware.","technologies":["Kotlin","Audio Playback Capture API","PCM","Foreground Services","Material Design"],"href":"#sonicbridge"},
-  {"id":"biometric-sdk","name":"Biometric SDK","type":"Open source / Android SDK","status":"ONLINE","version":"Latest","description":"Reusable biometric authentication SDK for Android projects that need a cleaner integration surface.","technologies":["Kotlin","Android SDK","Biometrics","Reusable APIs"],"href":"https://github.com/NonCoderF/biometric-sdk"},
-  {"id":"medium-articles","name":"Medium Articles","type":"Knowledge base","status":"PUBLISHED","version":"Active","description":"Practical notes on architecture, Compose, performance, and the craft of shipping mobile software.","technologies":["Android","Writing","Architecture"],"href":"https://medium.com/@sallyinfo365"}
+  {
+    "id": "archguard",
+    "name": "ArchGuard",
+    "type": "Open source / Gradle Plugin",
+    "status": "ONLINE",
+    "version": "Latest",
+    "description": "Kotlin and Gradle plugin for Android architecture validation, project structure checks, and clean module boundaries.",
+    "technologies": [
+      "Kotlin",
+      "Gradle",
+      "Static analysis",
+      "Android architecture"
+    ],
+    "href": "https://github.com/NonCoderF/ArchGuard"
+  },
+  {
+    "id": "taporiai",
+    "name": "Tapori AI",
+    "type": "Android app",
+    "status": "PUBLISHED",
+    "version": "Latest",
+    "description": "Android chatbot experiment exploring conversational interfaces and local-first AI-assisted mobile interactions.",
+    "technologies": [
+      "Android",
+      "Kotlin",
+      "AI",
+      "Conversational UI"
+    ],
+    "href": "https://play.google.com/store/apps/details?id=com.sparkstudios.tapori.ai.chatbot&hl=en_IN"
+  },
+  {
+    "id": "sally-launcher",
+    "name": "Sally Launcher",
+    "type": "Android app",
+    "status": "PUBLISHED",
+    "version": "Latest",
+    "description": "Custom Android launcher focused on a clean, smooth user experience and fast access to core phone actions.",
+    "technologies": [
+      "Android SDK",
+      "Kotlin",
+      "UX",
+      "Launcher"
+    ],
+    "href": "https://play.google.com/store/apps/details?id=com.code.amiles.sally.free&hl=en_IN"
+  },
+  {
+    "id": "vantage-circle",
+    "name": "Vantage Circle",
+    "type": "Professional / Enterprise",
+    "status": "PRODUCTION",
+    "version": "2020 — 2026",
+    "description": "Enterprise employee engagement and rewards Android app.",
+    "technologies": [
+      "Jetpack Compose",
+      "MVVM",
+      "Apollo GraphQL",
+      "Material 3"
+    ],
+    "href": "https://play.google.com/store/apps/details?id=com.bargaintechnologies.vantagecircle&hl=en_IN"
+  },
+  {
+    "id": "sonicbridge",
+    "name": "SonicBridge",
+    "type": "Android / Audio Engineering",
+    "status": "RESEARCH",
+    "version": "Latest",
+    "description": "Private TV audio over local Wi-Fi: a low-latency Android system for personal listening without cloud services or expensive hardware.",
+    "technologies": [
+      "Kotlin",
+      "Audio Playback Capture API",
+      "PCM",
+      "Foreground Services",
+      "Material Design"
+    ],
+    "href": "#sonicbridge"
+  },
+  {
+    "id": "biometric-sdk",
+    "name": "Biometric SDK",
+    "type": "Open source / Android SDK",
+    "status": "ONLINE",
+    "version": "Latest",
+    "description": "Reusable biometric authentication SDK for Android projects that need a cleaner integration surface.",
+    "technologies": [
+      "Kotlin",
+      "Android SDK",
+      "Biometrics",
+      "Reusable APIs"
+    ],
+    "href": "https://github.com/NonCoderF/biometric-sdk"
+  },
+  {
+    "id": "medium-articles",
+    "name": "Medium Articles",
+    "type": "Knowledge base",
+    "status": "PUBLISHED",
+    "version": "Active",
+    "description": "Practical notes on architecture, Compose, performance, and the craft of shipping mobile software.",
+    "technologies": [
+      "Android",
+      "Writing",
+      "Architecture"
+    ],
+    "href": "https://medium.com/@sallyinfo365"
+  }
 ]

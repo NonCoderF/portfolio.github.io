@@ -1,1 +1,57 @@
-{"Languages":["Kotlin","Java","Python","PHP","JavaScript","SQL"],"Android":["Android SDK","Jetpack Compose","XML","Material 3","Navigation","ViewModel","Room","WorkManager","DataStore"],"Architecture":["MVVM","MVP","Clean Architecture","Repository Pattern","SOLID","Modularization"],"Networking & Cloud":["Retrofit","OkHttp","Apollo GraphQL","REST APIs","WebSockets","Firebase Auth","Firestore","FCM","Crashlytics"],"Testing & Delivery":["JUnit","Espresso","GitHub Actions","CI/CD","Performance","Code review"],"Developer Tools":["Android Studio","IntelliJ IDEA","Git","GitHub","Gradle","Postman","Figma"]}
+{
+  "Languages": [
+    "Kotlin",
+    "Java",
+    "Python",
+    "PHP",
+    "JavaScript",
+    "SQL"
+  ],
+  "Android": [
+    "Android SDK",
+    "Jetpack Compose",
+    "XML",
+    "Material 3",
+    "Navigation",
+    "ViewModel",
+    "Room",
+    "WorkManager",
+    "DataStore"
+  ],
+  "Architecture": [
+    "MVVM",
+    "MVP",
+    "Clean Architecture",
+    "Repository Pattern",
+    "SOLID",
+    "Modularization"
+  ],
+  "Networking & Cloud": [
+    "Retrofit",
+    "OkHttp",
+    "Apollo GraphQL",
+    "REST APIs",
+    "WebSockets",
+    "Firebase Auth",
+    "Firestore",
+    "FCM",
+    "Crashlytics"
+  ],
+  "Testing & Delivery": [
+    "JUnit",
+    "Espresso",
+    "GitHub Actions",
+    "CI/CD",
+    "Performance",
+    "Code review"
+  ],
+  "Developer Tools": [
+    "Android Studio",
+    "IntelliJ IDEA",
+    "Git",
+    "GitHub",
+    "Gradle",
+    "Postman",
+    "Figma"
+  ]
+}
