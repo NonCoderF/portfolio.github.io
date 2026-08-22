@@ -1,57 +1,58 @@
 {
-  "Languages": [
+  "Mobile": [
+    "Android",
+    "Flutter",
     "Kotlin",
+    "Dart",
     "Java",
-    "Python",
-    "PHP",
-    "JavaScript",
-    "SQL"
-  ],
-  "Android": [
-    "Android SDK",
     "Jetpack Compose",
-    "XML",
     "Material 3",
-    "Navigation",
-    "ViewModel",
-    "Room",
-    "WorkManager",
-    "DataStore"
+    "Android SDK"
   ],
   "Architecture": [
-    "MVVM",
-    "MVP",
     "Clean Architecture",
-    "Repository Pattern",
+    "MVVM",
+    "MVI",
     "SOLID",
-    "Modularization"
+    "Feature-first architecture",
+    "Modularization",
+    "Multi-module architecture",
+    "Repository pattern"
   ],
-  "Networking & Cloud": [
+  "State & Async": [
+    "Riverpod",
+    "Coroutines",
+    "Flow",
+    "StateFlow",
+    "RxJava",
+    "Dart async/await"
+  ],
+  "Networking & Backend": [
+    "Dio",
     "Retrofit",
     "OkHttp",
-    "Apollo GraphQL",
-    "REST APIs",
-    "WebSockets",
-    "Firebase Auth",
-    "Firestore",
-    "FCM",
-    "Crashlytics"
+    "REST",
+    "GraphQL",
+    "Supabase",
+    "Firebase",
+    "Ktor",
+    "WebSockets"
   ],
-  "Testing & Delivery": [
-    "JUnit",
-    "Espresso",
+  "AI": [
+    "OpenAI",
+    "LLM integration",
+    "AI-assisted applications",
+    "Supabase Edge Functions",
+    "Prompt-driven features",
+    "RAG-style professional context"
+  ],
+  "Tooling": [
+    "Gradle",
     "GitHub Actions",
     "CI/CD",
-    "Performance",
-    "Code review"
-  ],
-  "Developer Tools": [
-    "Android Studio",
-    "IntelliJ IDEA",
+    "Android Profiler",
     "Git",
-    "GitHub",
-    "Gradle",
-    "Postman",
-    "Figma"
+    "MCP",
+    "Developer tooling"
   ]
 }
