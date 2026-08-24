@@ -49,12 +49,88 @@
 
   // Assistant presentation layer. Networking stays isolated in services/nizam-api.js.
   const assistant = $('.assistant-shell'), assistantTrigger = $('.assistant-trigger'), assistantClose = $('.assistant-close'), assistantInput = $('.assistant-form input'), assistantForm = $('.assistant-form'), assistantSend = $('.assistant-form button'), assistantMessages = $('.assistant-messages');
+  const assistantMemory = (() => {
+    const dbName = 'digital-me-db', storeName = 'qa-history', fallbackKey = 'digital-me-qa-history';
+    const limit = 25;
+    const openDb = () => new Promise(resolve => {
+      if (!('indexedDB' in window)) return resolve(null);
+      const request = indexedDB.open(dbName, 1);
+      request.onupgradeneeded = () => {
+        const db = request.result;
+        if (!db.objectStoreNames.contains(storeName)) db.createObjectStore(storeName, { keyPath: 'id' });
+      };
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => resolve(null);
+    });
+    const fallbackRead = () => {
+      try { return JSON.parse(localStorage.getItem(fallbackKey) || '[]'); } catch (error) { return []; }
+    };
+    const fallbackWrite = items => {
+      try { localStorage.setItem(fallbackKey, JSON.stringify(items.slice(-limit))); } catch (error) {}
+    };
+    const all = async () => {
+      const db = await openDb();
+      if (!db) return fallbackRead();
+      return new Promise(resolve => {
+        const tx = db.transaction(storeName, 'readonly');
+        const request = tx.objectStore(storeName).getAll();
+        request.onsuccess = () => resolve((request.result || []).sort((a, b) => a.createdAt - b.createdAt).slice(-limit));
+        request.onerror = () => resolve(fallbackRead());
+      });
+    };
+    const save = async (question, answer) => {
+      const item = { id: `${Date.now()}-${Math.random().toString(16).slice(2)}`, question, answer, createdAt: Date.now() };
+      const db = await openDb();
+      if (!db) { const items = fallbackRead(); items.push(item); fallbackWrite(items); return item; }
+      await new Promise(resolve => {
+        const tx = db.transaction(storeName, 'readwrite');
+        tx.objectStore(storeName).put(item);
+        tx.oncomplete = resolve;
+        tx.onerror = resolve;
+      });
+      const items = await all();
+      if (items.length > limit) {
+        const remove = items.slice(0, items.length - limit);
+        const tx = db.transaction(storeName, 'readwrite');
+        remove.forEach(entry => tx.objectStore(storeName).delete(entry.id));
+      }
+      return item;
+    };
+    const clear = async () => {
+      localStorage.removeItem(fallbackKey);
+      const db = await openDb();
+      if (!db) return;
+      await new Promise(resolve => {
+        const tx = db.transaction(storeName, 'readwrite');
+        tx.objectStore(storeName).clear();
+        tx.oncomplete = resolve;
+        tx.onerror = resolve;
+      });
+    };
+    return { all, save, clear };
+  })();
   const assistantError = 'Sorry, I\'m having trouble responding right now. Please try again.';
   const suggestedQuestions = ['What is your strongest Android experience?', 'Tell me about Tapori AI.', 'What have you built with Flutter?', 'How do you approach Clean Architecture?', 'What makes you suitable for a Senior Mobile Engineer role?'];
   $$('.assistant-prompts button').forEach((button, index) => { button.textContent = suggestedQuestions[index] || suggestedQuestions[0]; });
   const openAssistant = () => { assistant?.classList.add('open'); assistantTrigger?.setAttribute('aria-expanded', 'true'); };
   const scrollAssistantBottom = (behavior = 'smooth') => requestAnimationFrame(() => assistantMessages?.scrollTo({ top: assistantMessages.scrollHeight, behavior }));
   const postAssistant = (text, className = '') => { openAssistant(); const p = document.createElement('p'); p.className = `assistant-msg ${className}`.trim(); p.textContent = text; assistantMessages?.appendChild(p); scrollAssistantBottom(); return p; };
+  const buildMemoryContext = items => items.slice(-3).map((item, index) => `Previous Q${index + 1}: ${item.question}\nPrevious A${index + 1}: ${String(item.answer).slice(0, 500)}`).join('\n\n');
+  const buildPromptWithMemory = async prompt => {
+    const history = await assistantMemory.all();
+    const context = buildMemoryContext(history);
+    if (!context) return prompt;
+    return `Use this recent local Digital Me Q&A history only as conversational context. Do not mention it unless it helps answer the visitor.\n\n${context}\n\nCurrent visitor question: ${prompt}`;
+  };
+  const renderMemoryHistory = async () => {
+    const history = await assistantMemory.all();
+    if (!assistantMessages || !history.length || $('.ai-memory-summary', assistantMessages)) return;
+    const panel = document.createElement('div');
+    panel.className = 'assistant-msg ai-memory-summary';
+    panel.innerHTML = `<span class="ai-message-label">LOCAL MEMORY / ${history.length} SAVED</span><div class="ai-memory-actions"><button type="button" class="ai-memory-clear">Clear local Q&A</button></div>${history.slice(-3).map(item => `<details><summary>${escapeAI(item.question)}</summary><p>${highlightTech(item.answer)}</p></details>`).join('')}`;
+    assistantMessages.appendChild(panel);
+    $('.ai-memory-clear', panel)?.addEventListener('click', async () => { await assistantMemory.clear(); panel.remove(); postAssistant('Local Digital Me Q&A history cleared for this browser.', 'reveal'); });
+  };
   const escapeAI = text => String(text).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
   const techWords = ['Kotlin','Dart','Flutter','Riverpod','Dio','GoRouter','Jetpack Compose','Compose','Gradle','MVVM','MVI','Android','OpenAI','LLM','Supabase','Clean Architecture','Open Source','Architecture','GraphQL','Firebase','SonicBridge','Shockwave','Biometric SDK','Sally Launcher','Tapori AI','ArchGuard'];
   const projectLinks = { 'archguard': ['ArchGuard','Gradle plugin for executable architecture rules and clean architecture validation.','https://github.com/NonCoderF/ArchGuard'], 'sonicbridge': ['SonicBridge','TV-to-mobile low-latency audio over local Wi-Fi.','#sonicbridge'], 'shockwave': ['Shockwave','Immersive audio engineering platform.','#shockwave-hq'], 'tapori ai': ['Tapori AI','Android and Flutter AI chat app with Supabase Edge Functions and LLM integration.','https://github.com/NonCoderF/tapori-ai/tree/master-flutter'], 'flutter': ['Tapori AI Flutter Source','Flutter implementation on the master-flutter branch.','https://github.com/NonCoderF/tapori-ai/tree/master-flutter'], 'biometric sdk': ['Biometric SDK','Reusable lifecycle-aware biometric authentication SDK for Android.','https://github.com/NonCoderF/biometric-sdk'], 'sally launcher': ['Sally Launcher','Custom Android launcher focused on a clean experience.','https://play.google.com/store/apps/details?id=com.code.amiles.sally.free&hl=en_IN'] };
@@ -65,9 +141,10 @@
   const streamResponse = async text => { openAssistant(); const panel = document.createElement('div'); panel.className = 'assistant-msg ai-response reveal'; panel.innerHTML = '<span class="ai-message-label">NIZAM / RESPONSE</span><div class="ai-stream-text"></div>'; assistantMessages?.appendChild(panel); scrollAssistantBottom('auto'); const stream = $('.ai-stream-text', panel); for (const character of String(text)) { stream.textContent += character; scrollAssistantBottom('auto'); await delay(character === '\n' ? 110 : /[.!?,:;]/.test(character) ? 55 : 9); } stream.innerHTML = formatAIResponse(text); const project = appendProjectContext(text); if (project) panel.insertAdjacentHTML('beforeend', project); scrollAssistantBottom(); return panel; };
   const thinkingPhases = ['Initializing knowledge...', 'Loading engineering profile...', 'Analyzing question...', 'Searching experience...', 'Generating response...', 'Complete.'];
   const think = async (node, request) => { let complete = false; request.finally(() => { complete = true; }); for (const phase of thinkingPhases) { node.textContent = phase; if (complete) break; await delay(150); } return request; };
-  const askAssistant = async question => { const prompt = String(question || '').trim(); if (!prompt || !window.NizamApi || assistantForm?.dataset.busy === 'true') return; assistantForm.dataset.busy = 'true'; if (assistantInput) assistantInput.disabled = true; if (assistantSend) assistantSend.disabled = true; postAssistant(prompt, 'user-message'); const thinking = postAssistant('Initializing knowledge...', 'assistant-typing reveal'); const started = performance.now(); try { const request = window.NizamApi.askNizam(prompt); const reply = await think(thinking, request); thinking.remove(); await streamResponse(reply); const latency = Math.max(1, Math.round(performance.now() - started)); if ($('#ai-latency')) $('#ai-latency').textContent = `${latency}ms`; if ($('#ai-last-response')) $('#ai-last-response').textContent = 'Now'; } catch (error) { thinking.remove(); if (error.name !== 'AbortError') postAssistant(assistantError, 'reveal'); } finally { assistantForm.dataset.busy = 'false'; if (assistantInput) assistantInput.disabled = false; if (assistantSend) assistantSend.disabled = false; assistantInput?.focus(); } };
+  const askAssistant = async question => { const prompt = String(question || '').trim(); if (!prompt || !window.NizamApi || assistantForm?.dataset.busy === 'true') return; assistantForm.dataset.busy = 'true'; if (assistantInput) assistantInput.disabled = true; if (assistantSend) assistantSend.disabled = true; postAssistant(prompt, 'user-message'); const thinking = postAssistant('Initializing knowledge...', 'assistant-typing reveal'); const started = performance.now(); try { const promptWithMemory = await buildPromptWithMemory(prompt); const request = window.NizamApi.askNizam(promptWithMemory); const reply = await think(thinking, request); thinking.remove(); await streamResponse(reply); await assistantMemory.save(prompt, reply); $('.ai-memory-summary', assistantMessages)?.remove(); renderMemoryHistory(); const latency = Math.max(1, Math.round(performance.now() - started)); if ($('#ai-latency')) $('#ai-latency').textContent = `${latency}ms`; if ($('#ai-last-response')) $('#ai-last-response').textContent = 'Now'; } catch (error) { thinking.remove(); if (error.name !== 'AbortError') postAssistant(assistantError, 'reveal'); } finally { assistantForm.dataset.busy = 'false'; if (assistantInput) assistantInput.disabled = false; if (assistantSend) assistantSend.disabled = false; assistantInput?.focus(); } };
   const closeAssistant = () => { assistant?.classList.remove('open'); assistantTrigger?.setAttribute('aria-expanded', 'false'); assistantTrigger?.focus(); };
-  assistantTrigger?.addEventListener('click', () => { const open = assistant.classList.toggle('open'); assistantTrigger.setAttribute('aria-expanded', String(open)); if (open) assistantInput?.focus(); }); assistantClose?.addEventListener('click', closeAssistant); addEventListener('keydown', event => { if (event.key === 'Escape' && assistant?.classList.contains('open')) closeAssistant(); }); $$('.assistant-prompts button,.prompt-list button').forEach(button => button.addEventListener('click', () => askAssistant(button.textContent))); $('.assistant-inline-open')?.addEventListener('click', event => { event.preventDefault(); openAssistant(); assistantInput?.focus(); }); assistantForm?.addEventListener('submit', event => { event.preventDefault(); const prompt = assistantInput?.value.trim(); if (!prompt) return; assistantInput.value = ''; askAssistant(prompt); });
+  assistantTrigger?.addEventListener('click', () => { const open = assistant.classList.toggle('open'); assistantTrigger.setAttribute('aria-expanded', String(open)); if (open) { renderMemoryHistory(); assistantInput?.focus(); } }); assistantClose?.addEventListener('click', closeAssistant); addEventListener('keydown', event => { if (event.key === 'Escape' && assistant?.classList.contains('open')) closeAssistant(); }); $$('.assistant-prompts button,.prompt-list button').forEach(button => button.addEventListener('click', () => askAssistant(button.textContent))); $('.assistant-inline-open')?.addEventListener('click', event => { event.preventDefault(); openAssistant(); renderMemoryHistory(); assistantInput?.focus(); }); assistantForm?.addEventListener('submit', event => { event.preventDefault(); const prompt = assistantInput?.value.trim(); if (!prompt) return; assistantInput.value = ''; askAssistant(prompt); });
+  renderMemoryHistory();
 
   // Device lab.
   const devices = { pixel: ['PIXEL 9 PRO','Sally Launcher'], tablet: ['PIXEL TABLET','Vantage Circle'], fold: ['PIXEL FOLD','TaporiAI'], wear: ['PIXEL WATCH','Vantage Fit'] }; $$('.device-tabs button').forEach(button => button.addEventListener('click', () => { $$('.device-tabs button').forEach(b => b.classList.remove('active')); button.classList.add('active'); const [label,title] = devices[button.dataset.device]; $('#device-label').textContent = label; $('#device-title').textContent = title; $('#device-mock').className = `device-mock ${button.dataset.device}`; }));
