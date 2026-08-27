@@ -1,5 +1,36 @@
 [
   {
+    "id": "adaptive-exercise-recognition",
+    "name": "Adaptive Exercise Recognition - Personalized ML Case Study",
+    "type": "Vantage Fit / Computer Vision",
+    "status": "PRODUCTION CASE STUDY",
+    "version": "Rules to TFLite",
+    "description": "An AI-powered adaptive exercise recognition system for Vantage Fit that evolved from rule-based squat detection into a validation-gated TensorFlow Lite classifier with anti-cheat logic and a personalization feedback loop.",
+    "role": "Designed exercise-recognition logic on top of existing pose landmarks, investigated real-world failures, introduced environmental and sensor validation, migrated deterministic recognition to ML, and shaped the personalization architecture.",
+    "challenge": "Users exposed edge cases by lying down, changing phone orientation, exercising in poor lighting, and showing prerecorded squat videos, forcing the system to evolve through independent validation gates instead of relying on one computer-vision decision.",
+    "technologies": [
+      "Kotlin",
+      "Android SDK",
+      "Camera",
+      "Pose landmarks",
+      "TensorFlow Lite",
+      "Android Sensors",
+      "Device Orientation APIs",
+      "Computer Vision",
+      "Machine Learning",
+      "Personalized model pipeline"
+    ],
+    "href": "#adaptive-exercise-recognition",
+    "links": [
+      {
+        "label": "Read case study",
+        "href": "#adaptive-exercise-recognition",
+        "primary": true
+      }
+    ],
+    "note": "Conceptual architecture only. This portfolio does not expose proprietary source code or unprovided performance metrics."
+  },
+  {
     "id": "taporiai",
     "name": "Tapori AI - Android & Flutter AI Chat Application",
     "type": "Android + Flutter / AI Chat",

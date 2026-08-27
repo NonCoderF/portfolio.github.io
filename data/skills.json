@@ -41,6 +41,13 @@
   "AI": [
     "OpenAI",
     "LLM integration",
+    "Computer Vision",
+    "Pose / skeletal landmark detection",
+    "TensorFlow Lite",
+    "Android Sensors",
+    "Device Orientation APIs",
+    "Personalized model pipeline",
+    "Activity / exercise recognition",
     "AI-assisted applications",
     "Supabase Edge Functions",
     "Prompt-driven features",

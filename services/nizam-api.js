@@ -5,6 +5,31 @@
   let activeController = null;
 
   const isShockwavePrompt = prompt => /\bshock\s*wave\b|\bshockwave\b/i.test(prompt);
+  const isExercisePrompt = prompt => /\b(exercise recognition|squat|squats|push[- ]?ups?|jumping jacks?|tflite|tensorflow lite|pose|landmarks|cheat|anti[- ]?cheat|personalized model|iterative algorithm)\b/i.test(prompt);
+
+  const fallbackExerciseReply = () => `Adaptive Exercise Recognition is my Vantage Fit computer-vision case study.
+
+Problem:
+The requirement was to detect exercises such as squats using the mobile camera. I used an existing pose/skeleton detection API to get labeled body landmarks; my work was the recognition system built on top of those landmarks.
+
+How squat detection started:
+- Camera frame -> pose landmarks -> joint movement tracking -> waveform/cycle detection -> confidence threshold -> squat count.
+- The first squat detector treated motion as a cycle similar to a sine waveform and counted a rep when the observed pattern crossed the approximate 90% confidence threshold.
+
+What changed in production:
+- Users lying down could move their legs and mimic the cycle, so I added standing-posture validation from skeletal landmarks.
+- Phone orientation exposed that image coordinates are not real-world orientation, so I used Android device-orientation APIs as a precondition.
+- Poor lighting created landmark jitter, so lighting validation rejected bad input before pose detection and recognition.
+- Showing a prerecorded squat video could fool the camera, so I used independent Android sensor/context signals as a lightweight liveness check.
+
+ML evolution:
+The rule-based waveform detector became difficult to generalize, so classification moved to a TensorFlow Lite model for exercises such as squats, push-ups, and jumping jacks. TFLite handled on-device inference. Training and personalization happened in a separate adaptation pipeline, and updated personalized models were used for future inference.
+
+Personalization:
+The system did not only learn what a squat looks like. Over time, it learned what your squat looks like. Valid sessions produced movement data that could adapt recognition around a user's range of motion, speed, body proportions, joint trajectories, and exercise style.
+
+Engineering lesson:
+Build -> Observe -> Break -> Understand -> Improve -> Repeat. The strongest part of the project was not just integrating TensorFlow Lite; it was evolving the system through real failures, anti-cheat design, device context, validation gates, and production ownership.`;
 
   const fallbackShockwaveReply = async () => {
     const fallback = {
@@ -64,6 +89,7 @@ ${roadmap}`;
       const normalizedPrompt = String(prompt || '').trim();
       if (!normalizedPrompt) return '';
 
+      if (isExercisePrompt(normalizedPrompt)) return fallbackExerciseReply();
       if (isShockwavePrompt(normalizedPrompt)) return fallbackShockwaveReply();
 
       if (activeController) activeController.abort();

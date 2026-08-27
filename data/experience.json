@@ -4,7 +4,7 @@
     "role": "Senior Android Developer",
     "company": "Vantage Circle",
     "location": "Guwahati, India",
-    "mission": "Enterprise Android products, 60%+ MVP to MVVM migration, 25+ XML to Jetpack Compose screens, Material 3 adoption, modular architecture, Android performance optimization, Kalman filtering, ML Kit Pose Detection, SQLite to Room modernization, Android 15 readiness, mentoring, and technical ownership.",
+    "mission": "Enterprise Android products, Vantage Fit adaptive exercise recognition, 60%+ MVP to MVVM migration, 25+ XML to Jetpack Compose screens, Material 3 adoption, modular architecture, Android performance optimization, Kalman filtering, ML Kit Pose Detection, TensorFlow Lite inference, Android sensor validation, SQLite to Room modernization, Android 15 readiness, mentoring, and technical ownership.",
     "technologies": [
       "Kotlin",
       "Jetpack Compose",
@@ -12,6 +12,8 @@
       "Material 3",
       "Room",
       "ML Kit",
+      "TensorFlow Lite",
+      "Android Sensors",
       "Performance"
     ]
   },
