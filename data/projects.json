@@ -5,9 +5,9 @@
     "type": "Vantage Fit / Computer Vision",
     "status": "PRODUCTION CASE STUDY",
     "version": "Rules to TFLite",
-    "description": "An AI-powered adaptive exercise recognition system for Vantage Fit that evolved from rule-based squat detection into a validation-gated TensorFlow Lite classifier with anti-cheat logic and a personalization feedback loop.",
-    "role": "Designed exercise-recognition logic on top of existing pose landmarks, investigated real-world failures, introduced environmental and sensor validation, migrated deterministic recognition to ML, and shaped the personalization architecture.",
-    "challenge": "Users exposed edge cases by lying down, changing phone orientation, exercising in poor lighting, and showing prerecorded squat videos, forcing the system to evolve through independent validation gates instead of relying on one computer-vision decision.",
+    "description": "An AI-powered adaptive exercise recognition system for Vantage Fit that evolved from pose-landmark movement tracking and rule-based squat detection into a validation-gated TensorFlow Lite classifier with anti-cheat logic and a personalization feedback loop.",
+    "role": "Designed exercise-recognition logic on top of existing pose landmarks, used background session recordings during testing to understand real user behavior, introduced environmental and sensor validation, migrated deterministic recognition to ML, and shaped the personalization architecture.",
+    "challenge": "Real users found ways to game the detector by lying down, changing phone orientation, exercising in poor lighting, and showing prerecorded squat videos, forcing the system to evolve through independent validation gates instead of relying on one computer-vision decision.",
     "technologies": [
       "Kotlin",
       "Android SDK",
@@ -28,7 +28,7 @@
         "primary": true
       }
     ],
-    "note": "Conceptual architecture only. This portfolio does not expose proprietary source code or unprovided performance metrics."
+    "note": "Conceptual architecture only. This portfolio avoids proprietary source code, sensitive anti-cheat implementation details, and unprovided performance metrics."
   },
   {
     "id": "taporiai",
