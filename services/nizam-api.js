@@ -90,12 +90,9 @@ ${roadmap}`;
   };
 
   window.NizamApi = {
-    async askNizam(prompt) {
+    async askNizam(prompt, history = []) {
       const normalizedPrompt = String(prompt || '').trim();
       if (!normalizedPrompt) return '';
-
-      if (isExercisePrompt(normalizedPrompt)) return fallbackExerciseReply();
-      if (isShockwavePrompt(normalizedPrompt)) return fallbackShockwaveReply();
 
       if (activeController) activeController.abort();
       const controller = new AbortController();
@@ -103,17 +100,28 @@ ${roadmap}`;
 
       try {
         const url = new URL(ENDPOINT);
-        url.searchParams.set('prompt', normalizedPrompt);
         const response = await fetch(url, {
-          method: 'GET',
-          headers: { Accept: 'application/json' },
+          method: 'POST',
+          headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            prompt: normalizedPrompt,
+            history: Array.isArray(history) ? history : []
+          }),
           signal: controller.signal
         });
         if (!response.ok) throw new Error('Nizam API request failed');
         const payload = await response.json();
         if (typeof payload.reply !== 'string') throw new Error('Nizam API response was invalid');
-        if (!payload.reply.trim() && isShockwavePrompt(normalizedPrompt)) return fallbackShockwaveReply();
+        if (!payload.reply.trim()) throw new Error('Nizam API returned an empty response');
         return payload.reply;
+      } catch (error) {
+        if (error.name === 'AbortError') throw error;
+        if (isExercisePrompt(normalizedPrompt)) return fallbackExerciseReply();
+        if (isShockwavePrompt(normalizedPrompt)) return fallbackShockwaveReply();
+        throw error;
       } finally {
         if (activeController === controller) activeController = null;
       }
