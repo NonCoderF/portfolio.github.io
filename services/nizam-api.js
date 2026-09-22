@@ -116,11 +116,14 @@ ${roadmap}`;
         const payload = await response.json();
         if (typeof payload.reply !== 'string') throw new Error('Nizam API response was invalid');
         if (!payload.reply.trim()) throw new Error('Nizam API returned an empty response');
-        return payload.reply;
+        return {
+          reply: payload.reply,
+          resources: Array.isArray(payload.resources) ? payload.resources : []
+        };
       } catch (error) {
         if (error.name === 'AbortError') throw error;
-        if (isExercisePrompt(normalizedPrompt)) return fallbackExerciseReply();
-        if (isShockwavePrompt(normalizedPrompt)) return fallbackShockwaveReply();
+        if (isExercisePrompt(normalizedPrompt)) return { reply: fallbackExerciseReply(), resources: [] };
+        if (isShockwavePrompt(normalizedPrompt)) return { reply: await fallbackShockwaveReply(), resources: [] };
         throw error;
       } finally {
         if (activeController === controller) activeController = null;
