@@ -1,35 +1,14 @@
 import { buildResumeIndex } from "../resume/resumeIndex.ts";
 import { hasPhrase, normalizeCanonicalQuery, normalizeQuery, tokenize } from "../retrieval/queryNormalizer.ts";
 import { detectTemporalIntent, type TemporalIntent } from "../temporal/temporalFacts.ts";
+import { CORE_KNOWLEDGE_IDS, NIZAM_KNOWLEDGE } from "./index.ts";
+import type { KnowledgeRecord } from "./types.ts";
 
-export interface KnowledgeChunk {
-  id: string;
-  source: string;
-  category: string;
-  title?: string;
-  content: string;
-  keywords: string[];
-  priority?: number;
-}
+export type KnowledgeChunk = KnowledgeRecord;
 
 export const MAX_RETRIEVED_CHUNKS = 5;
 
-const KNOWLEDGE_FILES = [
-  "identity.md",
-  "biography.md",
-  "career.md",
-  "experience.md",
-  "projects.md",
-  "skills.md",
-  "articles.md",
-  "philosophy.md",
-  "personality.md",
-  "interview.md",
-  "faq.md",
-  "privacy.md",
-  "conversation.md",
-  "current-status.md",
-];
+export const KNOWLEDGE_SOURCE = "TYPESCRIPT_STATIC_IMPORT" as const;
 
 let cachedChunks: KnowledgeChunk[] | null = null;
 
@@ -38,20 +17,32 @@ export const buildKnowledgeIndex = async (): Promise<KnowledgeChunk[]> => {
     return cachedChunks;
   }
 
-  const fileChunks = (await Promise.all(KNOWLEDGE_FILES.map(loadFileChunks))).flat();
+  const personalChunks: KnowledgeChunk[] = NIZAM_KNOWLEDGE;
   const resumeChunks = buildResumeIndex().map((section): KnowledgeChunk => ({
     id: section.id,
     source: "resumeSource.ts",
     category: section.intent,
     title: section.title,
     content: section.content,
+    type: "fact",
+    topics: [...section.keywords, ...(section.phrases ?? [])],
     keywords: [...section.keywords, ...(section.phrases ?? [])],
+    verified: true,
     priority: section.priority,
   }));
 
-  cachedChunks = [...resumeChunks, ...fileChunks];
+  cachedChunks = [...resumeChunks, ...personalChunks];
   return cachedChunks;
 };
+
+export const getKnowledgeDiagnostics = () => ({
+  source: KNOWLEDGE_SOURCE,
+  recordCount: NIZAM_KNOWLEDGE.length,
+  coreRecords: Object.fromEntries(CORE_KNOWLEDGE_IDS.map((id) => [
+    id,
+    NIZAM_KNOWLEDGE.some((record) => record.id === id) ? "FOUND" : "MISSING",
+  ])),
+});
 
 export const retrieveKnowledgeChunks = async (
   query: string,
@@ -75,7 +66,7 @@ export const retrieveKnowledgeChunks = async (
     .map(({ chunk }) => chunk);
 
   if (temporalIntent !== "general") {
-    const currentStatus = chunks.find((chunk) => chunk.source === "current-status.md");
+    const currentStatus = chunks.find((chunk) => chunk.source === "typescript:current-status");
     if (currentStatus && !ranked.some((chunk) => chunk.id === currentStatus.id)) {
       return [currentStatus, ...ranked].slice(0, limit);
     }
@@ -119,46 +110,6 @@ const temporalSourceBoost = (
   const haystack = normalizeQuery(`${chunk.id} ${chunk.source} ${chunk.category} ${chunk.title ?? ""} ${chunk.content}`);
   return boosts.some((boost) => haystack.includes(normalizeQuery(boost))) ? 20 : 0;
 };
-
-const loadFileChunks = async (filename: string): Promise<KnowledgeChunk[]> => {
-  try {
-    const fileUrl = new URL(`./${filename}`, import.meta.url);
-    const text = await Deno.readTextFile(fileUrl);
-    return splitMarkdownIntoChunks(filename, text);
-  } catch (_error) {
-    return [];
-  }
-};
-
-const splitMarkdownIntoChunks = (source: string, text: string): KnowledgeChunk[] => {
-  const category = source.replace(/\.(md|json)$/i, "");
-  const sections = text
-    .split(/\n(?=#{1,3}\s+)/)
-    .map((section) => section.trim())
-    .filter(Boolean);
-
-  return sections.map((section, index) => {
-    const title = section.match(/^#{1,3}\s+(.+)$/m)?.[1]?.trim();
-    const content = section.slice(0, 1800);
-
-    return {
-      id: `${category}-${index + 1}`,
-      source,
-      category,
-      title,
-      content,
-      keywords: extractKeywords(`${title ?? ""} ${content}`),
-      priority: title ? 70 : 50,
-    };
-  });
-};
-
-const extractKeywords = (text: string): string[] =>
-  [...new Set(
-    tokenize(text)
-      .filter((token) => token.length > 2)
-      .slice(0, 40),
-  )];
 
 const scoreChunk = (
   chunk: KnowledgeChunk,

@@ -16,7 +16,7 @@ export type OpenAIEmbeddingResult =
 export const callOpenAIChat = async (
   apiKey: string,
   messages: OpenAIMessage[],
-  maxTokens = 180,
+  maxTokens = 600,
   temperature = 0.7,
 ): Promise<OpenAIResult> => {
   const openAIResponse = await fetch(

@@ -49,7 +49,7 @@ export const TEMPORAL_FACTS: TemporalFact[] = [
     endDate: VANTAGE_CIRCLE_LAST_WORKING_DAY,
     status: "former",
     isCurrent: false,
-    source: "knowledge/experience.md#vantage-circle",
+    source: "knowledge/professionalKnowledge.ts#experience-4",
   },
   {
     subject: "Nizamuddin Ali Ahmed",
@@ -59,7 +59,7 @@ export const TEMPORAL_FACTS: TemporalFact[] = [
     startDate: "2026-05-09",
     status: "current",
     isCurrent: true,
-    source: "knowledge/current-status.md",
+    source: "knowledge/identityKnowledge.ts#current-status-1",
   },
 ];
 

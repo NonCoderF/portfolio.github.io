@@ -6,7 +6,7 @@ import { normalizeCanonicalQuery, normalizeQuery } from "./retrieval/queryNormal
 import { buildSystemPrompt } from "./prompts/promptBuilder.ts";
 import { sanitizeHistory } from "./history.ts";
 import { DOB } from "./knowledge/memories.ts";
-import { resolveRelevantResources, resolveResources } from "./resources/resourceResolver.ts";
+import { resolveRelevantResources, resolveResources, selectEvidenceBackedResources } from "./resources/resourceResolver.ts";
 import { detectIntent } from "./retrieval/intentDetector.ts";
 import { retrieveResumeSections } from "./resume/resumeRetriever.ts";
 import { detectQueryScope } from "./retrieval/queryScope.ts";
@@ -14,7 +14,8 @@ import { chooseAnswerMode } from "./answers/answerMode.ts";
 import { validatePersonalAnswer } from "./answers/responseValidator.ts";
 import { getTemplateAnswer } from "./answers/templateAnswers.ts";
 import { getTemporalAnswer } from "./answers/temporalAnswers.ts";
-import { retrieveKnowledgeChunks } from "./knowledge/fileIndex.ts";
+import { getKnowledgeDiagnostics, retrieveKnowledgeChunks } from "./knowledge/fileIndex.ts";
+import { NIZAM_KNOWLEDGE } from "./knowledge/index.ts";
 import { parseQueryExpansion } from "./retrieval/queryExpansion.ts";
 import { parseQueryUnderstanding, type QueryUnderstanding } from "./retrieval/queryUnderstanding.ts";
 import { cosineSimilarity, retrieveSemanticKnowledge } from "./retrieval/semanticRetriever.ts";
@@ -60,6 +61,29 @@ const idsFor = (query: string): string[] =>
 
 const resumeIdsFor = (query: string): string[] =>
   retrieveResumeSections(query).map((section) => section.id);
+
+Deno.test("deployment artifact contains verified knowledge across core domains", () => {
+  assert(NIZAM_KNOWLEDGE.length >= 25, "production knowledge collection is unexpectedly small");
+  assert(NIZAM_KNOWLEDGE.every((record) => record.verified), "collection contains unverified records");
+  assertEquals(new Set(NIZAM_KNOWLEDGE.map((record) => record.id)).size, NIZAM_KNOWLEDGE.length);
+
+  const byId = new Map(NIZAM_KNOWLEDGE.map((record) => [record.id, record]));
+  const exercise = byId.get("projects-2")?.content.toLowerCase() ?? "";
+  for (const concept of ["pose", "smooth", "tensorflow lite", "posture", "orientation", "false positives", "liveness"]) {
+    assert(exercise.includes(concept), `exercise-recognition record is missing ${concept}`);
+  }
+
+  assert(byId.get("projects-3")?.content.includes("ArchGuard"), "Android architecture memory is missing");
+  assert(byId.get("projects-4")?.content.includes("TCP networking"), "networking memory is missing");
+  assert(byId.get("experience-4")?.content.includes("Jetpack Compose"), "Compose experience is missing");
+  assert(byId.get("experience-4")?.content.includes("MVP to MVVM"), "architecture migration experience is missing");
+  assert(byId.get("skills-1")?.content.includes("API integration"), "integration skills memory is missing");
+
+  const diagnostics = getKnowledgeDiagnostics();
+  assertEquals(diagnostics.source, "TYPESCRIPT_STATIC_IMPORT");
+  assertEquals(diagnostics.recordCount, NIZAM_KNOWLEDGE.length);
+  assert(Object.values(diagnostics.coreRecords).every((status) => status === "FOUND"), "runtime core record diagnostics failed");
+});
 
 Deno.test("normalizes spelling, aliases, punctuation, and grammar variations", () => {
   assertEquals(normalizeCanonicalQuery("When did you born?"), "when were you born");
@@ -421,6 +445,42 @@ Deno.test("parses semantic query understanding for personal, general, and blende
   assertEquals(general?.mode, "general");
 });
 
+Deno.test("semantic mode invariants prevent blended requests from skipping personal retrieval", () => {
+  const parsed = parseQueryUnderstanding(JSON.stringify({
+    mode: "blended",
+    intent: "solution_design",
+    topics: ["on-device ML"],
+    retrieval_queries: ["related mobile computer vision experience"],
+    needs_personal_memory: false,
+    needs_general_knowledge: true,
+    personal_claims_must_be_verified: false,
+    should_surface_resources: false,
+    confidence: 0.8,
+  }));
+  assert(parsed, "blended router output did not parse");
+  assertEquals(parsed!.needsPersonalMemory, true);
+  assertEquals(parsed!.needsGeneralKnowledge, true);
+  assertEquals(parsed!.personalClaimsMustBeVerified, true);
+});
+
+Deno.test("solution design and advice get a retrieval opportunity while definitions remain general", () => {
+  const design = parseQueryUnderstanding(JSON.stringify({
+    mode: "general", intent: "solution_design", topics: ["movement analysis"], retrieval_queries: [],
+    needs_personal_memory: false, needs_general_knowledge: true,
+    personal_claims_must_be_verified: false, should_surface_resources: false, confidence: 0.8,
+  }));
+  assertEquals(design?.mode, "blended");
+  assertEquals(design?.needsPersonalMemory, true);
+
+  const definition = parseQueryUnderstanding(JSON.stringify({
+    mode: "general", intent: "general_question", topics: ["object detection"], retrieval_queries: [],
+    needs_personal_memory: false, needs_general_knowledge: true,
+    personal_claims_must_be_verified: false, should_surface_resources: false, confidence: 0.9,
+  }));
+  assertEquals(definition?.mode, "general");
+  assertEquals(definition?.needsPersonalMemory, false);
+});
+
 Deno.test("semantic retrieval maps varied mobile ML phrasing to the same verified experience", async () => {
   const cases = [
     ["Did you use TensorFlow Lite before?", ["TensorFlow Lite", "exercise recognition"]],
@@ -482,6 +542,25 @@ Deno.test("personal claim verification parsing and optional resources stay inter
   assertEquals(cosineSimilarity([1, 0], [1, 0]), 1);
 });
 
+Deno.test("evidence-backed resource selection is downstream, scored, and optional", async () => {
+  const exercise = (await retrieveKnowledgeChunks(
+    "mobile movement recognition",
+    ["pose estimation", "on-device exercise classification"],
+    10,
+  )).find((chunk) => chunk.id === "projects-2");
+  if (!exercise) throw new Error("exercise evidence was not available to resource selection");
+
+  const relevant = selectEvidenceBackedResources(
+    ["pose detection", "on-device ML", "TensorFlow Lite"],
+    [exercise],
+  );
+  assertEquals(relevant.resources[0]?.id, "adaptive-exercise-recognition");
+  assert((relevant.diagnostics[0]?.score ?? 0) >= 0.79, "related resource score was below threshold");
+
+  const unrelated = selectEvidenceBackedResources(["object detection definition"], []);
+  assertEquals(unrelated.resources.length, 0);
+});
+
 Deno.test("evidence reranking keeps only material experience and exposes an analogy plan to generation", async () => {
   const understanding = testUnderstanding({
     mode: "blended",
@@ -501,10 +580,12 @@ Deno.test("evidence reranking keeps only material experience and exposes an anal
       evidence_id: relevant.id,
       relevance: "analogical",
       informs_reasoning: "Past camera movement work makes temporal joint stability and real-world validation useful starting points.",
+      transferable_lessons: ["Smooth noisy landmarks before classifying movement."],
     }],
   }), candidates);
   assertEquals(selection?.chunks.length, 1);
   assertEquals(selection?.connections[0]?.relevance, "analogical");
+  assertEquals(selection?.connections[0]?.transferableLessons.length, 1);
 
   const built = buildSystemPrompt("How would you analyze a new movement with a phone camera?", {
     understanding,
@@ -567,6 +648,77 @@ Deno.test("general and unsupported-experience prompts preserve the identity boun
   });
   const unsupportedPrompt = buildSystemPrompt("Have you used an absent technology?", { understanding: unsupported, knowledgeChunks: [] });
   assert(unsupportedPrompt.systemPrompt.includes("NO VERIFIED EVIDENCE"), "missing experience was not bounded");
+});
+
+Deno.test("original blended failure carries verified experience through retrieval, reranking, and context assembly", async () => {
+  const question = "If you had to build an app that detects whether someone is throwing a proper punch using only the phone camera, how would you do it?";
+  const understanding = testUnderstanding({
+    mode: "blended",
+    intent: "solution_design",
+    topics: ["human movement recognition", "pose estimation", "joint trajectories", "temporal motion", "on-device inference"],
+    retrievalQueries: ["camera-based movement recognition noisy pose joints validation", "Android on-device exercise classification real-world false positives"],
+    needsPersonalMemory: true,
+    needsGeneralKnowledge: true,
+    personalClaimsMustBeVerified: true,
+  });
+  const retrieval = await retrieveSemanticKnowledge(undefined, question, understanding);
+  assert(retrieval.semanticQuery.includes("human movement recognition"), "semantic concepts were not included in retrieval query");
+  assert(retrieval.diagnostics.length > 0, "retrieval diagnostics were empty");
+  const relevant = retrieval.chunks.filter((chunk) => /exercise recognition|pose landmarks|joint|squat|false positives/i.test(chunk.content)).slice(0, 2);
+  assert(relevant.length > 0, "verified movement-recognition experience was not retrieved");
+
+  const connections = relevant.map((chunk) => ({
+    evidenceId: chunk.id,
+    relevance: "analogical" as const,
+    informsReasoning: "Real camera movement work informs input stabilization, validation, and production failure analysis for a new movement problem.",
+    transferableLessons: ["Stabilize noisy input before classifying movement.", "Validate camera conditions before trusting a result."],
+  }));
+  const built = buildSystemPrompt(question, { understanding, knowledgeChunks: relevant, evidenceConnections: connections });
+  const questionPosition = built.systemPrompt.indexOf("CURRENT QUESTION");
+  const bridgePosition = built.systemPrompt.indexOf("WHY THE SELECTED EXPERIENCE MATTERS");
+  const evidencePosition = built.systemPrompt.indexOf("VERIFIED RELEVANT NIZAM EXPERIENCE");
+  assert(questionPosition >= 0 && bridgePosition > questionPosition && evidencePosition > bridgePosition, "generation context is ordered incorrectly");
+  assert(built.systemPrompt.includes("INTERNAL SYNTHESIS"), "transferable-lesson synthesis instruction missing");
+  assert(built.systemPrompt.includes("model training from conversion, deployment, and inference runtimes"), "technology-role accuracy instruction missing");
+  assertEquals(resolveRelevantResources(question, understanding.topics, relevant).length, 0, "retrieval incorrectly forced a project card");
+});
+
+Deno.test("requested unseen evaluation set retrieves domain-appropriate evidence", async () => {
+  const cases: Array<[string, string[], string, RegExp]> = [
+    ["How would you detect whether someone is falling using only an Android phone camera?", ["human fall detection", "pose trajectories", "camera movement"], "camera exercise recognition pose validation false positives", /exercise recognition|pose landmarks|false positives/i],
+    ["Could you build something that recognizes dance movements?", ["dance movement recognition", "temporal pose sequence", "on-device classification"], "exercise movement classification pose landmarks", /exercise recognition|pose landmarks|tensorflow lite/i],
+    ["If pose landmarks keep jumping around even when the person isn't moving, what would you do?", ["landmark jitter", "coordinate smoothing", "input confidence"], "noisy pose joint coordinates smoothing lighting", /smooth noisy pose|landmark jitter|kalman/i],
+    ["Suppose an exercise detector works perfectly for me but gives false positives for users. What would you investigate?", ["false positives", "real users", "input validation"], "exercise recognition production false positives session feedback", /false positives|real session|users/i],
+    ["How would you detect whether somebody picked up the wrong package in a warehouse?", ["human-object interaction", "camera event recognition", "temporal validation"], "camera movement recognition validation real-world false positives", /exercise recognition|pose landmarks|false positives/i],
+    ["How would you recognize a tennis serve?", ["sports movement recognition", "joint trajectories", "temporal classification"], "exercise movement recognition pose sequence", /exercise recognition|pose landmarks|squat/i],
+    ["How would you approach breaking a large Android application into modules?", ["Android modularization", "feature boundaries", "dependency direction"], "modularized Android features architecture", /modular|feature-first|architecture/i],
+    ["An Android app works perfectly over Wi-Fi but requests sometimes timeout over mobile data. Where would you look?", ["Android networking", "network timeout", "transport reliability"], "TCP local network reliability latency Android", /tcp|network reliability|latency/i],
+    ["If you inherited an old MVP Android project, would you rewrite everything?", ["legacy MVP", "incremental modernization", "MVVM migration"], "large MVP codebase migration MVVM Compose", /mvp|mvvm|moderniz/i],
+  ];
+
+  for (const [question, topics, retrievalQuery, expected] of cases) {
+    const understanding = testUnderstanding({
+      mode: "blended",
+      intent: "solution_design",
+      topics,
+      retrievalQueries: [retrievalQuery],
+      needsPersonalMemory: true,
+      needsGeneralKnowledge: true,
+    });
+    const result = await retrieveSemanticKnowledge(undefined, question, understanding);
+    assert(result.chunks.some((chunk) => expected.test(chunk.content)), `${question} missed domain-appropriate experience`);
+  }
+});
+
+Deno.test("technology roles remain accurate in blended generation context", async () => {
+  const chunks = await retrieveKnowledgeChunks("TensorFlow Lite exercise recognition training inference");
+  const exercise = chunks.find((chunk) => /training.*separate.*tensorflow lite|tensorflow lite.*on-device inference/i.test(chunk.content));
+  assert(exercise, "verified context does not distinguish training from TFLite inference");
+  const persona = buildSystemPrompt("How would you deploy a new mobile model?", {
+    understanding: testUnderstanding({ mode: "blended", intent: "solution_design", needsPersonalMemory: true, needsGeneralKnowledge: true }),
+    knowledgeChunks: exercise ? [exercise] : [],
+  });
+  assert(persona.systemPrompt.includes("Distinguish model training from conversion"), "runtime accuracy guard is missing");
 });
 
 Deno.test("resolves current employment deterministically from temporal facts", () => {
@@ -670,16 +822,16 @@ Deno.test("temporal source boosting retrieves current status for present-state q
   assertEquals(state.currentEmployment, null);
   assertEquals(state.latestFormerEmployment?.endDate, "2026-05-08");
   assert(
-    currentEmployerChunks.some((chunk) => chunk.source === "current-status.md" || /status: former|last working day/i.test(chunk.content)),
+    currentEmployerChunks.some((chunk) => chunk.source === "typescript:current-status" || /status: former|last working day/i.test(chunk.content)),
     "current employment retrieval missed temporal records",
   );
   assert(
-    currentActivityChunks.some((chunk) => chunk.source === "current-status.md"),
-    `current activity retrieval missed current-status.md: ${currentActivityChunks.map((chunk) => chunk.source).join(",")}`,
+    currentActivityChunks.some((chunk) => chunk.source === "typescript:current-status"),
+    `current activity retrieval missed static current-status knowledge: ${currentActivityChunks.map((chunk) => chunk.source).join(",")}`,
   );
 });
 
-Deno.test("markdown-first orchestration supports broad personal and persona fallback cases", async () => {
+Deno.test("static knowledge orchestration supports broad personal and persona fallback cases", async () => {
   const cases = [
     ["Who are you?", "general", "grounded_synthesis", "resume-identity"],
     ["Tell me about yourself.", "general", "grounded_synthesis", "resume-identity"],

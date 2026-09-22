@@ -6,6 +6,7 @@ export type EvidenceConnection = {
   evidenceId: string;
   relevance: "direct" | "analogical";
   informsReasoning: string;
+  transferableLessons: string[];
 };
 
 export type EvidenceSelection = {
@@ -25,7 +26,7 @@ export const selectRelevantEvidence = async (
   }
 
   if (!apiKey) {
-    return { chunks: candidates.slice(0, 3), connections: [], strategy: "retrieval_order" };
+    return { chunks: fallbackEvidence(candidates, understanding), connections: [], strategy: "retrieval_order" };
   }
 
   const result = await callOpenAIChat(
@@ -35,11 +36,25 @@ export const selectRelevantEvidence = async (
     0,
   );
   if (!result.ok) {
-    return { chunks: candidates.slice(0, 3), connections: [], strategy: "retrieval_order" };
+    return { chunks: fallbackEvidence(candidates, understanding), connections: [], strategy: "retrieval_order" };
   }
 
   const parsed = parseEvidenceSelection(result.message, candidates);
-  return parsed ?? { chunks: candidates.slice(0, 3), connections: [], strategy: "retrieval_order" };
+  return parsed ?? { chunks: fallbackEvidence(candidates, understanding), connections: [], strategy: "retrieval_order" };
+};
+
+const fallbackEvidence = (
+  candidates: KnowledgeChunk[],
+  understanding: QueryUnderstanding,
+): KnowledgeChunk[] => {
+  const reasoningIntent = understanding.mode === "blended" ||
+    understanding.intent === "solution_design" ||
+    understanding.intent === "advice" ||
+    understanding.intent === "opinion";
+  const useful = reasoningIntent
+    ? candidates.filter((chunk) => !["conversation", "faq", "privacy", "identity"].includes(chunk.category))
+    : candidates;
+  return (useful.length ? useful : candidates).slice(0, 3);
 };
 
 export const buildEvidenceSelectionMessages = (
@@ -53,10 +68,10 @@ export const buildEvidenceSelectionMessages = (
 
 For personal factual questions, select evidence that directly supports the requested claim.
 For blended questions, evidence may be directly relevant or analogically relevant: it should change how an experienced Nizam would reason about the new problem, not merely share a broad technology word.
-Reject background that would only decorate a generic answer.
+Reject background that would only decorate a generic answer. For selected evidence, extract 1-4 concrete transferable lessons from decisions, failures, constraints, trade-offs, edge cases, or debugging experience stated in that evidence. Do not return generic shared-technology descriptions as lessons.
 Do not infer new history. Describe how evidence informs present reasoning without claiming Nizam built the new system.
 Return JSON only:
-{"selected_ids":["id"],"connections":[{"evidence_id":"id","relevance":"direct|analogical","informs_reasoning":"short concrete explanation"}]}
+{"selected_ids":["id"],"connections":[{"evidence_id":"id","relevance":"direct|analogical","informs_reasoning":"short concrete explanation","transferable_lessons":["concrete lesson"]}]}
 Select at most 3 items. Empty selection is valid.`,
   },
   {
@@ -89,6 +104,11 @@ export const parseEvidenceSelection = (
           evidenceId: value.evidence_id,
           relevance: value.relevance,
           informsReasoning: value.informs_reasoning.trim().slice(0, 300),
+          transferableLessons: Array.isArray(value.transferable_lessons)
+            ? value.transferable_lessons.filter((lesson): lesson is string =>
+              typeof lesson === "string" && lesson.trim().length > 0
+            ).slice(0, 4).map((lesson) => lesson.trim().slice(0, 240))
+            : [],
         }];
       })
       : [];

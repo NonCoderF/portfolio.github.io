@@ -2,13 +2,22 @@ import { buildKnowledgeIndex, retrieveKnowledgeChunks, type KnowledgeChunk } fro
 import { callOpenAIEmbeddings } from "../openaiClient.ts";
 import type { QueryUnderstanding } from "./queryUnderstanding.ts";
 
-const MAX_RESULTS = 5;
+const MAX_RESULTS = 10;
 const MIN_SIMILARITY = 0.3;
 let cachedChunkEmbeddings: Promise<{ chunks: KnowledgeChunk[]; vectors: number[][] } | null> | null = null;
 
 export type SemanticRetrievalResult = {
   chunks: KnowledgeChunk[];
   strategy: "embedding" | "semantic_terms" | "none";
+  semanticQuery: string;
+  diagnostics: RetrievalDiagnostic[];
+};
+
+export type RetrievalDiagnostic = {
+  id: string;
+  title?: string;
+  score: number | null;
+  contentPreview: string;
 };
 
 export const retrieveSemanticKnowledge = async (
@@ -16,21 +25,29 @@ export const retrieveSemanticKnowledge = async (
   question: string,
   understanding: QueryUnderstanding,
 ): Promise<SemanticRetrievalResult> => {
-  if (!understanding.needsPersonalMemory) return { chunks: [], strategy: "none" };
+  if (!understanding.needsPersonalMemory) {
+    return { chunks: [], strategy: "none", semanticQuery: "", diagnostics: [] };
+  }
 
   const semanticQuery = [question, ...understanding.topics, ...understanding.retrievalQueries].join("\n");
   if (apiKey) {
     const index = await getEmbeddingIndex(apiKey);
     const queryEmbedding = await callOpenAIEmbeddings(apiKey, [semanticQuery]);
     if (index && queryEmbedding.ok) {
-      const ranked = index.chunks.map((chunk, indexPosition) => ({
+      const rankedWithScores = index.chunks.map((chunk, indexPosition) => ({
         chunk,
         score: cosineSimilarity(queryEmbedding.embeddings[0], index.vectors[indexPosition]),
       })).filter(({ score }) => score >= MIN_SIMILARITY)
         .sort((a, b) => b.score - a.score || (b.chunk.priority ?? 0) - (a.chunk.priority ?? 0))
-        .slice(0, MAX_RESULTS)
-        .map(({ chunk }) => chunk);
-      if (ranked.length > 0) return { chunks: ranked, strategy: "embedding" };
+        .slice(0, MAX_RESULTS);
+      if (rankedWithScores.length > 0) {
+        return {
+          chunks: rankedWithScores.map(({ chunk }) => chunk),
+          strategy: "embedding",
+          semanticQuery,
+          diagnostics: rankedWithScores.map(({ chunk, score }) => diagnosticFor(chunk, score)),
+        };
+      }
     }
   }
 
@@ -39,8 +56,20 @@ export const retrieveSemanticKnowledge = async (
     [...understanding.topics, ...understanding.retrievalQueries],
     MAX_RESULTS,
   );
-  return { chunks: fallback, strategy: "semantic_terms" };
+  return {
+    chunks: fallback,
+    strategy: "semantic_terms",
+    semanticQuery,
+    diagnostics: fallback.map((chunk) => diagnosticFor(chunk, null)),
+  };
 };
+
+const diagnosticFor = (chunk: KnowledgeChunk, score: number | null): RetrievalDiagnostic => ({
+  id: chunk.id,
+  title: chunk.title,
+  score: score === null ? null : Math.round(score * 10000) / 10000,
+  contentPreview: chunk.content.replace(/\s+/g, " ").slice(0, 220),
+});
 
 const getEmbeddingIndex = async (
   apiKey: string,

@@ -5,6 +5,7 @@ export type SemanticIntent =
   | "technical_experience"
   | "opinion"
   | "advice"
+  | "solution_design"
   | "personal_fact"
   | "general_question"
   | "project_question"
@@ -24,7 +25,7 @@ export type QueryUnderstanding = {
 
 const VALID_MODES = new Set<UnderstandingMode>(["personal", "general", "blended"]);
 const VALID_INTENTS = new Set<SemanticIntent>([
-  "technical_experience", "opinion", "advice", "personal_fact",
+  "technical_experience", "opinion", "advice", "solution_design", "personal_fact",
   "general_question", "project_question", "other",
 ]);
 
@@ -40,7 +41,7 @@ Modes:
 
 Unknown is not a mode. A request about unverified experience is still personal/technical_experience and must be searched before absence is concluded.
 
-Intents: technical_experience, opinion, advice, personal_fact, general_question, project_question, other.
+Intents: technical_experience, opinion, advice, solution_design, personal_fact, general_question, project_question, other.
 
 topics: up to 6 normalized concepts. Resolve aliases and conceptual paraphrases. For example, questions about deploying mobile ML, on-device inference, activity classification, or exercise AI may include concepts such as Android, on-device ML, TensorFlow Lite, pose detection, or exercise recognition when semantically relevant.
 
@@ -53,7 +54,7 @@ should_surface_resources: true only when the user asks about a specific project/
 confidence: 0 to 1.
 
 Schema:
-{"mode":"personal|general|blended","intent":"technical_experience|opinion|advice|personal_fact|general_question|project_question|other","topics":["..."],"retrieval_queries":["..."],"needs_personal_memory":true,"needs_general_knowledge":true,"personal_claims_must_be_verified":true,"should_surface_resources":false,"confidence":0.0}`,
+{"mode":"personal|general|blended","intent":"technical_experience|opinion|advice|solution_design|personal_fact|general_question|project_question|other","topics":["..."],"retrieval_queries":["..."],"needs_personal_memory":true,"needs_general_knowledge":true,"personal_claims_must_be_verified":true,"should_surface_resources":false,"confidence":0.0}`,
   },
   { role: "user", content: query },
 ];
@@ -66,14 +67,20 @@ export const parseQueryUnderstanding = (raw: string): QueryUnderstanding | null 
     if (!VALID_MODES.has(parsed.mode as UnderstandingMode) ||
       !VALID_INTENTS.has(parsed.intent as SemanticIntent)) return null;
 
+    const parsedMode = parsed.mode as UnderstandingMode;
+    const intent = parsed.intent as SemanticIntent;
+    const mode: UnderstandingMode = parsedMode === "general" &&
+        (intent === "solution_design" || intent === "advice" || intent === "opinion")
+      ? "blended"
+      : parsedMode;
     return {
-      mode: parsed.mode as UnderstandingMode,
-      intent: parsed.intent as SemanticIntent,
+      mode,
+      intent,
       topics: cleanStrings(parsed.topics, 6),
       retrievalQueries: cleanStrings(parsed.retrieval_queries, 5),
-      needsPersonalMemory: parsed.needs_personal_memory === true,
-      needsGeneralKnowledge: parsed.needs_general_knowledge === true,
-      personalClaimsMustBeVerified: parsed.personal_claims_must_be_verified === true,
+      needsPersonalMemory: mode === "personal" || mode === "blended",
+      needsGeneralKnowledge: mode === "general" || mode === "blended",
+      personalClaimsMustBeVerified: mode !== "general" || parsed.personal_claims_must_be_verified === true,
       shouldSurfaceResources: parsed.should_surface_resources === true,
       confidence: clampConfidence(parsed.confidence),
     };

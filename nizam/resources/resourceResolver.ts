@@ -21,11 +21,26 @@ export type ResourceCard = {
 type ResourceDefinition = ResourceCard & {
   memoryIds?: string[];
   keywords: string[];
+  relatedKnowledgeIds?: string[];
+  semanticTopics?: string[];
 };
 
 type ResourceSource = {
   id: string;
   resources?: ResumeResourceRef[];
+};
+
+export type ResourceRelevanceDiagnostic = {
+  id: string;
+  score: number;
+  matchedEvidenceIds: string[];
+  matchedTopics: string[];
+  selected: boolean;
+};
+
+export type SemanticResourceSelection = {
+  resources: ResourceCard[];
+  diagnostics: ResourceRelevanceDiagnostic[];
 };
 
 const RESOURCES: ResourceDefinition[] = [
@@ -73,6 +88,8 @@ const RESOURCES: ResourceDefinition[] = [
     title: "Adaptive Exercise Recognition",
     subtitle: "On-device pose, TensorFlow Lite, validation, and anti-cheat engineering",
     memoryIds: ["projects-2"],
+    relatedKnowledgeIds: ["projects-2"],
+    semanticTopics: ["computer vision", "pose detection", "activity recognition", "on-device ml", "tensorflow lite", "movement recognition"],
     keywords: ["adaptive exercise recognition", "exercise recognition", "squat detection", "tensorflow lite", "tflite", "pose detection", "on-device ml"],
   },
   {
@@ -82,6 +99,8 @@ const RESOURCES: ResourceDefinition[] = [
     subtitle: "Kotlin Gradle plugin for executable architecture rules",
     url: "https://github.com/NonCoderF/ArchGuard",
     memoryIds: ["project-archguard", "project-summary", "resume-projects"],
+    relatedKnowledgeIds: ["projects-3", "project-archguard"],
+    semanticTopics: ["software architecture", "modularization", "feature-first architecture", "architecture enforcement", "gradle plugin"],
     keywords: ["archguard", "architecture rules", "gradle plugin"],
   },
   {
@@ -91,6 +110,8 @@ const RESOURCES: ResourceDefinition[] = [
     subtitle: "Android TV audio streaming over local Wi-Fi",
     url: "https://github.com/NonCoderF/Sonic-Bridge",
     memoryIds: ["project-sonicbridge", "project-summary", "resume-projects"],
+    relatedKnowledgeIds: ["projects-4", "project-sonicbridge"],
+    semanticTopics: ["tcp networking", "local networking", "audio streaming", "android tv", "network reliability"],
     keywords: ["sonicbridge", "sonic bridge", "audio streaming", "android tv"],
   },
   {
@@ -100,6 +121,8 @@ const RESOURCES: ResourceDefinition[] = [
     subtitle: "Android AI chatbot app",
     url: "https://play.google.com/store/apps/details?id=com.sparkstudios.tapori.ai.chatbot",
     memoryIds: ["project-tapori-ai", "project-summary", "resume-projects"],
+    relatedKnowledgeIds: ["projects-5", "project-tapori-ai"],
+    semanticTopics: ["ai product", "openai integration", "android ai"],
     keywords: ["tapori ai", "tapori", "ai chatbot"],
   },
   {
@@ -109,6 +132,8 @@ const RESOURCES: ResourceDefinition[] = [
     subtitle: "Reusable Android biometric authentication SDK",
     url: "https://github.com/NonCoderF/biometric-sdk",
     memoryIds: ["project-biometric-sdk", "project-summary", "resume-projects"],
+    relatedKnowledgeIds: ["projects-6", "project-biometric-sdk"],
+    semanticTopics: ["biometric authentication", "sdk design", "fingerprint authentication"],
     keywords: ["biometric sdk", "biometric", "fingerprint", "face authentication"],
   },
   {
@@ -117,6 +142,7 @@ const RESOURCES: ResourceDefinition[] = [
     title: "Orhan Project",
     subtitle: "Public portfolio project with limited shared details",
     memoryIds: ["project-orhan", "project-summary", "resume-projects"],
+    relatedKnowledgeIds: ["projects-7", "project-orhan"],
     keywords: ["orhan", "orhan project"],
   },
   {
@@ -125,6 +151,8 @@ const RESOURCES: ResourceDefinition[] = [
     title: "Sally Launcher",
     subtitle: "Custom Android launcher exploration",
     memoryIds: ["project-sally-launcher", "project-summary", "resume-projects"],
+    relatedKnowledgeIds: ["projects-8", "project-sally-launcher"],
+    semanticTopics: ["android launcher", "platform experience"],
     keywords: ["sally launcher", "sally", "launcher"],
   },
   {
@@ -133,6 +161,8 @@ const RESOURCES: ResourceDefinition[] = [
     title: "Vantage Circle",
     subtitle: "Senior Android Engineer work on enterprise Android apps",
     memoryIds: ["experience-vantage-circle", "career-summary", "resume-experience"],
+    relatedKnowledgeIds: ["experience-4", "experience-vantage-circle"],
+    semanticTopics: ["legacy modernization", "mvp", "mvvm", "jetpack compose", "modularization"],
     keywords: ["vantage circle", "vc"],
   },
   {
@@ -245,6 +275,39 @@ export const resolveRelevantResources = (
   return uniqueResources(supportedMatches.length ? supportedMatches : exactMatches)
     .slice(0, 2)
     .map(stripInternalFields);
+};
+
+export const selectEvidenceBackedResources = (
+  topics: string[],
+  evidence: ResourceSource[],
+): SemanticResourceSelection => {
+  const evidenceIds = new Set(evidence.map((item) => item.id));
+  const normalizedTopics = topics.map(normalizeQuery);
+  const diagnostics = RESOURCES.flatMap((resource): ResourceRelevanceDiagnostic[] => {
+    const matchedEvidenceIds = (resource.relatedKnowledgeIds ?? []).filter((id) => evidenceIds.has(id));
+    if (matchedEvidenceIds.length === 0) return [];
+    const matchedTopics = (resource.semanticTopics ?? []).filter((topic) => {
+      const normalized = normalizeQuery(topic);
+      return normalizedTopics.some((queryTopic) => queryTopic === normalized);
+    });
+    const score = Math.min(1, 0.72 + matchedTopics.length * 0.07);
+    return [{
+      id: resource.id,
+      score: Math.round(score * 100) / 100,
+      matchedEvidenceIds,
+      matchedTopics,
+      selected: false,
+    }];
+  }).sort((left, right) => right.score - left.score);
+
+  const winner = diagnostics.find((candidate) => candidate.score >= 0.79);
+  if (!winner) return { resources: [], diagnostics };
+  winner.selected = true;
+  const resource = RESOURCES.find((candidate) => candidate.id === winner.id);
+  return {
+    resources: resource ? [stripInternalFields(resource)] : [],
+    diagnostics,
+  };
 };
 
 export const resolveResources = (

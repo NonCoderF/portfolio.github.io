@@ -67,7 +67,7 @@ const formatTemporalFact = (fact: TemporalFact): string => [
 
 export function buildSystemPrompt(
   userPrompt: string,
-  options: { retry?: boolean; temporalRepair?: boolean; claimRepair?: string[]; knowledgeChunks?: KnowledgeChunk[]; evidenceConnections?: EvidenceConnection[]; understanding?: QueryUnderstanding | null } = {},
+  options: { retry?: boolean; temporalRepair?: boolean; claimRepair?: string[]; synthesisRepair?: string[]; knowledgeChunks?: KnowledgeChunk[]; evidenceConnections?: EvidenceConnection[]; understanding?: QueryUnderstanding | null } = {},
 ): BuiltPrompt {
   const detected = detectIntent(userPrompt);
   const temporal = resolveTemporalState(userPrompt);
@@ -120,6 +120,12 @@ export function buildSystemPrompt(
     );
   }
 
+  if (options.synthesisRepair?.length) {
+    promptParts.push(
+      `EXPERIENCE SYNTHESIS REPAIR: The previous draft did not materially reason from the selected experience: ${options.synthesisRepair.join(" | ")}. Rewrite it as one natural engineering answer. Transfer concrete lessons, constraints, failure modes, or trade-offs from the evidence into the proposed solution. Do not merely mention the project, append a credential, or default to a generic tutorial checklist. Keep past experience distinct from what I would do now.`,
+    );
+  }
+
   if (answerMode === "persona_reasoning" && contextCount === 0) {
     promptParts.push(
       "PERSONA FALLBACK: No exact answer was found in Nizam's files. Answer as Nizam using his known personality, career history, projects, technical interests, communication style, and professional values. This is allowed because the question concerns an opinion, preference, motivation, personality trait, or hypothetical situation. Do not invent concrete biographical facts or historical events.",
@@ -135,6 +141,11 @@ export function buildSystemPrompt(
   if (options.understanding?.mode === "blended") {
     promptParts.push(
       "EXPERIENCE-INFORMED BLENDED ANSWER: Answer the actual question first. Use the selected verified experience to influence how I frame risks, priorities, trade-offs, and the order of attack. Then reason beyond that experience using broad model knowledge. Make one coherent answer; do not bolt a memory summary onto a generic tutorial. Clearly distinguish what I actually did from what I would do now. Prefer concrete engineering judgment over a textbook checklist. Never turn analogy into invented history.",
+      "INTERNAL SYNTHESIS: Before answering, silently identify which verified experience transfers, what lesson it provides, what is different about the new problem, and what additional general knowledge is needed. Use that synthesis to form the answer, but never expose these internal steps or chain-of-thought.",
+      "STYLE FOR DESIGN AND OPINION QUESTIONS: Open with a direct judgment or starting point. Explain why, connect naturally to relevant experience, discuss the main trade-offs and failure modes, and give a concrete direction. Use numbered steps only when sequence genuinely improves clarity; do not default to an article-style checklist.",
+      contextCount > 0
+        ? "EVIDENCE UTILIZATION REQUIREMENT: The selected experience must visibly change the substance of the answer. Apply its concrete engineering decisions, real failure modes, constraints, trade-offs, or lessons to the new problem. A generic solution followed by 'this uses my experience' is not acceptable. Prefer a connected explanation over a numbered tutorial."
+        : "EVIDENCE UTILIZATION: No relevant personal evidence was selected, so reason usefully from broad knowledge without inventing experience.",
     );
   } else if (options.understanding?.mode === "general") {
     promptParts.push(
@@ -152,7 +163,11 @@ export function buildSystemPrompt(
     promptParts.push(
       "WHY THE SELECTED EXPERIENCE MATTERS:",
       options.evidenceConnections.map((connection) =>
-        `- [${connection.evidenceId}] ${connection.relevance}: ${connection.informsReasoning}`
+        `- [${connection.evidenceId}] ${connection.relevance}: ${connection.informsReasoning}${
+          connection.transferableLessons.length
+            ? `\n  Transferable lessons:\n${connection.transferableLessons.map((lesson) => `  - ${lesson}`).join("\n")}`
+            : ""
+        }`
       ).join("\n"),
     );
   }

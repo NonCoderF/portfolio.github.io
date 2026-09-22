@@ -8,9 +8,10 @@ import { validatePersonalAnswer } from "./answers/responseValidator.ts";
 import { isConcretePersonalFactQuery } from "./answers/answerMode.ts";
 import { sanitizeHistory, type ChatMessage } from "./history.ts";
 import { identityProfile } from "./knowledge/identityProfile.ts";
+import { getKnowledgeDiagnostics } from "./knowledge/fileIndex.ts";
 import { callOpenAIChat, type OpenAIMessage } from "./openaiClient.ts";
 import { buildSystemPrompt } from "./prompts/promptBuilder.ts";
-import { resolveRelevantResources, resolveResources } from "./resources/resourceResolver.ts";
+import { resolveRelevantResources, resolveResources, selectEvidenceBackedResources } from "./resources/resourceResolver.ts";
 import { detectIntent } from "./retrieval/intentDetector.ts";
 import { normalizeQuery } from "./retrieval/queryNormalizer.ts";
 import { detectQueryScope } from "./retrieval/queryScope.ts";
@@ -18,8 +19,10 @@ import { buildFallbackUnderstanding, buildUnderstandingMessages, parseQueryUnder
 import { retrieveSemanticKnowledge } from "./retrieval/semanticRetriever.ts";
 import { selectRelevantEvidence } from "./retrieval/evidenceSelector.ts";
 import { resolveTemporalState } from "./temporal/temporalFacts.ts";
+import { createPipelineRequestId, logPipelineDebug } from "./debug/pipelineDebug.ts";
 
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+const DIGITAL_NIZAM_DEBUG_TOKEN = Deno.env.get("DIGITAL_NIZAM_DEBUG_TOKEN");
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -31,6 +34,15 @@ type RequestBody = {
   prompt?: string;
   history?: unknown;
 };
+
+const isAuthorizedDebugRequest = (req: Request): boolean =>
+  Boolean(DIGITAL_NIZAM_DEBUG_TOKEN) &&
+  req.headers.get("x-digital-nizam-debug-token") === DIGITAL_NIZAM_DEBUG_TOKEN;
+
+const containsAffirmativeHistoricalClaim = (answer: string): boolean =>
+  /\bi (?:have |previously )?(?:built|worked on|used|implemented|integrated|developed|experienced|created|deployed)\b/i
+    .test(answer) &&
+  !/\bi (?:have not|haven't|did not|didn't|would|wouldn't)\b/i.test(answer);
 
 const jsonResponse = (
   body: Record<string, unknown>,
@@ -70,6 +82,9 @@ serve(async (req: Request): Promise<Response> => {
   }
 
   try {
+    const requestId = createPipelineRequestId();
+    const includeDebugTrace = isAuthorizedDebugRequest(req);
+    logPipelineDebug(requestId, "knowledge_initialization", getKnowledgeDiagnostics());
     const { prompt, history, historyWasInvalid } = await readRequest(req);
 
     if (historyWasInvalid) {
@@ -90,7 +105,7 @@ serve(async (req: Request): Promise<Response> => {
         intent: "identity",
         subtype: directIdentityAnswer.subtype,
         answerMode: "verified",
-        retrievedIds: ["identity.md"],
+        retrievedIds: ["identity-1"],
         resourceIds: directIdentityAnswer.resources.map((resource) => `${resource.type}:${resource.id}`),
         fastPath: true,
         openAICalled: false,
@@ -159,14 +174,49 @@ serve(async (req: Request): Promise<Response> => {
       if (understood.ok) understanding = parseQueryUnderstanding(understood.message);
     }
     understanding ??= buildFallbackUnderstanding(localScope, detected.intent);
+    logPipelineDebug(requestId, "router", {
+      mode: understanding.mode,
+      intent: understanding.intent,
+      topics: understanding.topics,
+      retrievalQueries: understanding.retrievalQueries,
+      needsPersonalMemory: understanding.needsPersonalMemory,
+      needsGeneralKnowledge: understanding.needsGeneralKnowledge,
+      personalClaimsMustBeVerified: understanding.personalClaimsMustBeVerified,
+      shouldSurfaceResources: understanding.shouldSurfaceResources,
+      confidence: understanding.confidence,
+    });
     const scope = understanding.mode === "general" ? "general" : "personal";
     const retrieval = await retrieveSemanticKnowledge(OPENAI_API_KEY, prompt, understanding);
+    logPipelineDebug(requestId, "semantic_retrieval_query", {
+      query: retrieval.semanticQuery,
+      strategy: retrieval.strategy,
+    });
+    logPipelineDebug(requestId, "raw_retrieval_results", {
+      results: retrieval.diagnostics,
+    });
     const evidence = await selectRelevantEvidence(
       OPENAI_API_KEY,
       prompt,
       understanding,
       retrieval.chunks,
     );
+    logPipelineDebug(requestId, "reranked_personal_evidence", {
+      strategy: evidence.strategy,
+      candidates: retrieval.diagnostics.map(({ id, title, score }) => ({ id, title, score })),
+      selected: evidence.chunks.map((chunk) => ({ id: chunk.id, title: chunk.title })),
+      rejectedIds: retrieval.chunks.filter((candidate) =>
+        !evidence.chunks.some((selected) => selected.id === candidate.id)
+      ).map((chunk) => chunk.id),
+    });
+    logPipelineDebug(requestId, "accepted_personal_evidence", {
+      strategy: evidence.strategy,
+      selected: evidence.chunks.map((chunk) => ({
+        id: chunk.id,
+        title: chunk.title,
+        contentPreview: chunk.content.replace(/\s+/g, " ").slice(0, 220),
+      })),
+      connections: evidence.connections,
+    });
     const chunks = evidence.chunks;
     logTemporalConflictWarnings(chunks);
 
@@ -175,9 +225,17 @@ serve(async (req: Request): Promise<Response> => {
       evidenceConnections: evidence.connections,
       understanding,
     });
-    const resources = understanding.shouldSurfaceResources
-      ? resolveRelevantResources(prompt, understanding.topics, [...builtPrompt.memories, ...chunks])
-      : [];
+    logPipelineDebug(requestId, "final_generation_context", {
+      question: prompt,
+      mode: understanding.mode,
+      intent: understanding.intent,
+      topics: understanding.topics,
+      relevantExperienceIds: chunks.map((chunk) => chunk.id),
+      experienceConnections: evidence.connections,
+      needsGeneralKnowledge: understanding.needsGeneralKnowledge,
+      historyMessages: history.length,
+      estimatedTokens: builtPrompt.estimatedTokens,
+    });
 
     if (!OPENAI_API_KEY) {
       console.error("OPENAI_API_KEY is not configured");
@@ -198,6 +256,8 @@ serve(async (req: Request): Promise<Response> => {
 
     let validationRetryUsed = false;
     let unsupportedClaims: string[] = [];
+    let synthesisFeedback: string[] = [];
+    const validationDiagnostics: Record<string, unknown> = {};
     let generated = await callOpenAIChat(OPENAI_API_KEY, messages);
 
     if (!generated.ok) {
@@ -219,21 +279,35 @@ serve(async (req: Request): Promise<Response> => {
       builtPrompt.scope,
       builtPrompt.resumeSections,
     );
+    if (includeDebugTrace) validationDiagnostics.initialDraft = message;
     let validation = validatePersonalAnswer(builtPrompt.scope, message, prompt);
+    if (includeDebugTrace) validationDiagnostics.initialLocalValidation = validation;
 
-    if (understanding.personalClaimsMustBeVerified) {
+    const requiresClaimVerification = understanding.mode === "personal" || chunks.length > 0 ||
+      containsAffirmativeHistoricalClaim(message);
+    if (understanding.personalClaimsMustBeVerified && requiresClaimVerification) {
       const verificationResult = await callOpenAIChat(
         OPENAI_API_KEY,
-        buildClaimVerificationMessages(prompt, message, builtPrompt.resumeSections, chunks),
+        buildClaimVerificationMessages(
+          prompt,
+          message,
+          builtPrompt.resumeSections,
+          chunks,
+          understanding.mode === "blended" && chunks.length > 0,
+        ),
         160,
         0,
       );
       const verification = verificationResult.ok
         ? parseClaimVerification(verificationResult.message)
         : null;
+      if (includeDebugTrace) validationDiagnostics.initialClaimVerification = verification;
       if (verification && !verification.supported) {
         unsupportedClaims = verification.unsupportedClaims;
         validation = { ok: false, kind: "personal", reason: "unsupported_personal_claim" };
+      } else if (verification && !verification.experienceInformed) {
+        synthesisFeedback = verification.synthesisFeedback;
+        validation = { ok: false, kind: "personal", reason: "insufficient_experience_transfer" };
       }
     }
 
@@ -243,6 +317,7 @@ serve(async (req: Request): Promise<Response> => {
         retry: true,
         temporalRepair: validation.kind === "temporal",
         claimRepair: unsupportedClaims,
+        synthesisRepair: synthesisFeedback,
         knowledgeChunks: chunks,
         evidenceConnections: evidence.connections,
         understanding,
@@ -277,29 +352,60 @@ serve(async (req: Request): Promise<Response> => {
         retryPrompt.scope,
         retryPrompt.resumeSections,
       );
+      if (includeDebugTrace) validationDiagnostics.retryDraft = message;
       validation = validatePersonalAnswer(retryPrompt.scope, message, prompt);
+      if (includeDebugTrace) validationDiagnostics.retryLocalValidation = validation;
 
-      if (validation.ok && understanding.personalClaimsMustBeVerified) {
+      const retryRequiresClaimVerification = understanding.mode === "personal" || chunks.length > 0 ||
+        containsAffirmativeHistoricalClaim(message);
+      if (validation.ok && understanding.personalClaimsMustBeVerified && retryRequiresClaimVerification) {
         const verificationResult = await callOpenAIChat(
           OPENAI_API_KEY,
-          buildClaimVerificationMessages(prompt, message, retryPrompt.resumeSections, chunks),
+          buildClaimVerificationMessages(
+            prompt,
+            message,
+            retryPrompt.resumeSections,
+            chunks,
+            understanding.mode === "blended" && chunks.length > 0,
+          ),
           160,
           0,
         );
         const verification = verificationResult.ok
           ? parseClaimVerification(verificationResult.message)
           : null;
+        if (includeDebugTrace) validationDiagnostics.retryClaimVerification = verification;
         if (verification && !verification.supported) {
           validation = { ok: false, kind: "personal", reason: "unsupported_personal_claim_after_retry" };
+        } else if (verification && !verification.experienceInformed) {
+          validation = { ok: false, kind: "personal", reason: "insufficient_experience_transfer_after_retry" };
         }
       }
 
       if (!validation.ok && retryPrompt.scope === "personal") {
-        message = understanding.intent === "technical_experience" || isConcretePersonalFactQuery(prompt)
-          ? "I can't honestly claim that specific experience from what I've verified about my work. I can still explain how I'd approach it using the engineering experience I do have."
-          : "My practical take is to break the problem down, validate the risky assumptions early, and let real feedback guide the next decision.";
+        const synthesisOnlyFailure = validation.reason?.startsWith("insufficient_experience_transfer") === true;
+        if (!synthesisOnlyFailure) {
+          message = understanding.intent === "technical_experience" || isConcretePersonalFactQuery(prompt)
+            ? "I can't honestly claim that specific experience from what I've verified about my work. I can still explain how I'd approach it using the engineering experience I do have."
+            : "My practical take is to break the problem down, validate the risky assumptions early, and let real feedback guide the next decision.";
+        }
       }
     }
+
+    const evidenceResourceSelection = selectEvidenceBackedResources(understanding.topics, chunks);
+    const explicitlyRequestedResources = understanding.shouldSurfaceResources
+      ? resolveRelevantResources(prompt, understanding.topics, [...builtPrompt.memories, ...chunks])
+      : [];
+    const resources = [...evidenceResourceSelection.resources, ...explicitlyRequestedResources]
+      .filter((resource, index, all) =>
+        all.findIndex((candidate) => candidate.type === resource.type && candidate.id === resource.id) === index
+      )
+      .slice(0, 1);
+    logPipelineDebug(requestId, "resource_selection", {
+      requested: understanding.shouldSurfaceResources,
+      candidates: evidenceResourceSelection.diagnostics,
+      resourceIds: resources.map((resource) => `${resource.type}:${resource.id}`),
+    });
 
     logDecision({
       normalized,
@@ -322,6 +428,40 @@ serve(async (req: Request): Promise<Response> => {
     return jsonResponse({
       reply: message,
       resources,
+      ...(includeDebugTrace
+        ? {
+          debug: {
+            requestId,
+            knowledge: getKnowledgeDiagnostics(),
+            router: understanding,
+            retrieval: {
+              query: retrieval.semanticQuery,
+              strategy: retrieval.strategy,
+              results: retrieval.diagnostics.map(({ id, title, score }) => ({ id, title, score })),
+            },
+            reranking: {
+              strategy: evidence.strategy,
+              selected: evidence.chunks.map((chunk) => ({ id: chunk.id, title: chunk.title })),
+              rejectedIds: retrieval.chunks.filter((candidate) =>
+                !evidence.chunks.some((selected) => selected.id === candidate.id)
+              ).map((chunk) => chunk.id),
+              connections: evidence.connections,
+            },
+            selectedEvidenceIds: chunks.map((chunk) => chunk.id),
+            resources: {
+              requested: understanding.shouldSurfaceResources,
+              candidates: evidenceResourceSelection.diagnostics,
+              selected: resources.map((resource) => ({ id: resource.id, type: resource.type })),
+            },
+            generation: {
+              model: "gpt-4o-mini",
+              maxOutputTokens: 600,
+              relevantExperienceIds: chunks.map((chunk) => chunk.id),
+              validation: validationDiagnostics,
+            },
+          },
+        }
+        : {}),
     });
   } catch (err) {
     console.error("Edge function error:", err);

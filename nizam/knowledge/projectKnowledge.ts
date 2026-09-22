@@ -1,8 +1,27 @@
-# Projects
+import type { KnowledgeRecord } from "./types.ts";
 
-Purpose: Single source of truth for public projects, product thinking, architecture, trade-offs, lessons, repositories, demos, and common questions.
+export const projectKnowledge: KnowledgeRecord[] = [
+  {
+    id: "projects-1",
+    source: "typescript:projects",
+    category: "projects",
+    type: "fact",
+    title: "Projects",
+    content: `# Projects
 
-## Adaptive Exercise Recognition
+Purpose: Single source of truth for public projects, product thinking, architecture, trade-offs, lessons, repositories, demos, and common questions.`,
+    topics: ["projects","purpose","single","source","truth","for","public","product","thinking","architecture","trade-offs","lessons","repositories","demos","and","common","questions."],
+    keywords: ["projects","purpose","single","source","truth","for","public","product","thinking","architecture","trade-offs","lessons","repositories","demos","and","common","questions."],
+    verified: true,
+    priority: 70,
+  },
+  {
+    id: "projects-2",
+    source: "typescript:projects",
+    category: "projects",
+    type: "project",
+    title: "Adaptive Exercise Recognition",
+    content: `## Adaptive Exercise Recognition
 
 Status: Production Android computer-vision experience from my work on Vantage Fit.
 
@@ -20,9 +39,19 @@ Lessons learned: A vision result should not be trusted alone when it can be game
 
 Common questions:
 - Did I use TensorFlow Lite? Yes. I used it for on-device exercise classification, including squat detection.
-- What problems did I face? Posture-based cheating, device orientation, poor-lighting landmark jitter, replay-video attacks, and generalizing rule-based movement detection.
-
-## ArchGuard
+- What problems did I face? Posture-`,
+    topics: ["adaptive","exercise","recognition","status","production","android","computer-vision","experience","from","work","vantage","fit.","problem","recognize","exercises","such","squats","mobile-camera","input","while","remaining","reliable","under","real"],
+    keywords: ["adaptive","exercise","recognition","status","production","android","computer-vision","experience","from","work","vantage","fit.","problem","recognize","exercises","such","squats","mobile-camera","input","while","remaining","reliable","under","real","user","behavior.","architecture","camera","frames","produced","pose","landmarks.","the","initial","squat","detector","tracked","joint","movement","waveform"],
+    verified: true,
+    priority: 70,
+  },
+  {
+    id: "projects-3",
+    source: "typescript:projects",
+    category: "projects",
+    type: "project",
+    title: "ArchGuard",
+    content: `## ArchGuard
 
 Status: Public project and favorite project.
 
@@ -55,9 +84,19 @@ Related articles: Not explicitly provided.
 Common questions:
 - Why ArchGuard? Because I wanted architecture rules to be executable, not only documented.
 - Why Gradle? Because Gradle sits directly in the Android build workflow.
-- Why is it my favorite? It combines architecture, Gradle internals, automation, DSL design, and developer experience.
-
-## SonicBridge
+- Why is it my favorite? It combines architecture, Gradle internals, automati`,
+    topics: ["archguard","status","public","project","and","favorite","project.","mission","turn","architecture","guidelines","into","executable","build","rules.","problem","rules","often","live","documents","code","review","comments.","that"],
+    keywords: ["archguard","status","public","project","and","favorite","project.","mission","turn","architecture","guidelines","into","executable","build","rules.","problem","rules","often","live","documents","code","review","comments.","that","makes","them","easy","miss","hard","enforce","consistently.","open-source","gradle","plugin","with","feature-first","support","layer","validation","configurable"],
+    verified: true,
+    priority: 70,
+  },
+  {
+    id: "projects-4",
+    source: "typescript:projects",
+    category: "projects",
+    type: "project",
+    title: "SonicBridge",
+    content: `## SonicBridge
 
 Status: Public project.
 
@@ -91,9 +130,19 @@ Related articles: Not explicitly provided.
 
 Common questions:
 - Why SonicBridge? Because it is a real engineering problem across audio, networking, Android services, and user experience.
-- What was hard? Latency, permissions, service lifecycle, and reliability.
-
-## Tapori AI
+- What was hard? Latency, permissions, service lifecycle, and reliability.`,
+    topics: ["sonicbridge","status","public","project.","mission","stream","android","audio","mobile","device","over","local","wi-fi.","problem","wanted","practical","way","bridge","another","real","time.","architecture","and","apps"],
+    keywords: ["sonicbridge","status","public","project.","mission","stream","android","audio","mobile","device","over","local","wi-fi.","problem","wanted","practical","way","bridge","another","real","time.","architecture","and","apps","connected","through","tcp","networking","with","foreground","services","supporting","continuous","streaming.","technology","kotlin","playback","capture","api","jetpack"],
+    verified: true,
+    priority: 70,
+  },
+  {
+    id: "projects-5",
+    source: "typescript:projects",
+    category: "projects",
+    type: "project",
+    title: "Tapori AI",
+    content: `## Tapori AI
 
 Status: Public Android app.
 
@@ -125,9 +174,19 @@ Related articles: Not explicitly provided.
 
 Common questions:
 - Why Tapori AI? Because I wanted to build an AI product through the lens of Android engineering.
-- What did it teach me? AI work still needs strong app architecture.
-
-## Biometric SDK
+- What did it teach me? AI work still needs strong app architecture.`,
+    topics: ["tapori","status","public","android","app.","mission","build","chatbot.","problem","wanted","connect","product","engineering","with","openai-powered","ai.","architecture","modular","approach","clear","integration","boundaries.","technology","kotlin"],
+    keywords: ["tapori","status","public","android","app.","mission","build","chatbot.","problem","wanted","connect","product","engineering","with","openai-powered","ai.","architecture","modular","approach","clear","integration","boundaries.","technology","kotlin","openai","architecture.","decisions","keep","behind","maintainable","boundaries","the","app","remains","understandable","grows.","challenges","products","still","need"],
+    verified: true,
+    priority: 70,
+  },
+  {
+    id: "projects-6",
+    source: "typescript:projects",
+    category: "projects",
+    type: "project",
+    title: "Biometric SDK",
+    content: `## Biometric SDK
 
 Status: Public project.
 
@@ -159,9 +218,19 @@ Related articles: Plug-and-play biometric authentication article.
 
 Common questions:
 - Why build a biometric SDK? To reduce repeated authentication integration work.
-- What makes a good SDK? Clear API, reliable behavior, and low integration friction.
-
-## Orhan
+- What makes a good SDK? Clear API, reliable behavior, and low integration friction.`,
+    topics: ["biometric","sdk","status","public","project.","mission","make","android","authentication","reusable","and","easier","integrate.","problem","can","become","repetitive","across","apps.","architecture","sdk.","technology","fingerprint","face"],
+    keywords: ["biometric","sdk","status","public","project.","mission","make","android","authentication","reusable","and","easier","integrate.","problem","can","become","repetitive","across","apps.","architecture","sdk.","technology","fingerprint","face","authentication.","engineering","decisions","hide","integration","complexity","while","keeping","the","api","clear","for","developers.","challenges","designing","surface"],
+    verified: true,
+    priority: 70,
+  },
+  {
+    id: "projects-7",
+    source: "typescript:projects",
+    category: "projects",
+    type: "project",
+    title: "Orhan",
+    content: `## Orhan
 
 Status: Public portfolio project with insufficient details in this knowledge system.
 
@@ -189,9 +258,19 @@ Demo: Not provided.
 
 Related articles: Not provided.
 
-Common questions: If asked, say I have not shared enough detail about Orhan to explain it accurately.
-
-## Sally Launcher
+Common questions: If asked, say I have not shared enough detail about Orhan to explain it accurately.`,
+    topics: ["orhan","status","public","portfolio","project","with","insufficient","details","this","knowledge","system.","mission","not","shared","publicly","here.","problem","architecture","technology","engineering","decisions","challenges","trade-offs","lessons"],
+    keywords: ["orhan","status","public","portfolio","project","with","insufficient","details","this","knowledge","system.","mission","not","shared","publicly","here.","problem","architecture","technology","engineering","decisions","challenges","trade-offs","lessons","learned","future","roadmap","repository","provided.","demo","related","articles","common","questions","asked","say","have","enough","detail","about"],
+    verified: true,
+    priority: 70,
+  },
+  {
+    id: "projects-8",
+    source: "typescript:projects",
+    category: "projects",
+    type: "project",
+    title: "Sally Launcher",
+    content: `## Sally Launcher
 
 Status: Public portfolio project.
 
@@ -219,9 +298,19 @@ Repository: Not provided.
 
 Demo: Not provided.
 
-Related articles: Not explicitly provided.
-
-## Shockwave
+Related articles: Not explicitly provided.`,
+    topics: ["sally","launcher","status","public","portfolio","project.","mission","explore","deeper","android","platform","behavior","through","custom","launcher.","problem","wanted","beyond","normal","app","screens","and","understand","launcher-level"],
+    keywords: ["sally","launcher","status","public","portfolio","project.","mission","explore","deeper","android","platform","behavior","through","custom","launcher.","problem","wanted","beyond","normal","app","screens","and","understand","launcher-level","experiences.","architecture","with","gallery","music","player","video","capabilities.","technology","development","player.","engineering","decisions","build","the","platform-experience"],
+    verified: true,
+    priority: 70,
+  },
+  {
+    id: "projects-9",
+    source: "typescript:projects",
+    category: "projects",
+    type: "project",
+    title: "Shockwave",
+    content: `## Shockwave
 
 Status: Future vision only. Not launched, not shipped, not built as a completed product.
 
@@ -249,4 +338,10 @@ Demo: Not provided.
 
 Related articles: Not provided.
 
-Common questions: If asked, clearly say it is a future-facing idea, not a shipped product.
+Common questions: If asked, clearly say it is a future-facing idea, not a shipped product.`,
+    topics: ["shockwave","status","future","vision","only.","not","launched","shipped","built","completed","product.","mission","explore","affordable","immersive","entertainment","home","audio","acoustic","engineering","room","planning","and","product"],
+    keywords: ["shockwave","status","future","vision","only.","not","launched","shipped","built","completed","product.","mission","explore","affordable","immersive","entertainment","home","audio","acoustic","engineering","room","planning","and","product","design.","problem","future-facing","idea","around","making","more","accessible.","architecture","defined","publicly","here.","technology","interest","planning.","decisions"],
+    verified: true,
+    priority: 70,
+  }
+];
