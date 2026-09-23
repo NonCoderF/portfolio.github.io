@@ -97,12 +97,18 @@ ${roadmap}`;
       if (activeController) activeController.abort();
       const controller = new AbortController();
       activeController = controller;
+      const clientStartedAt = performance.now();
+      const debugTiming = (...args) => { if (window.DIGITAL_NIZAM_DEBUG === true) console.log('[Nizam frontend]', ...args); };
+      debugTiming('browser request started', 0);
 
       try {
         const url = new URL(ENDPOINT);
         const response = await fetch(url, {
           method: 'POST',
           headers: {
+            // The production UI uses the stable JSON response contract.
+            // The answer is animated locally after parsing, so it does not
+            // depend on an SSE response reaching the browser.
             Accept: 'application/json',
             'Content-Type': 'application/json'
           },
@@ -112,8 +118,25 @@ ${roadmap}`;
           }),
           signal: controller.signal
         });
-        if (!response.ok) throw new Error('Nizam API request failed');
-        const payload = await response.json();
+        if (!response.ok) {
+          const errorBody = await response.text();
+          if (window.DIGITAL_NIZAM_DEBUG === true) console.error('Nizam API failure', response.status, errorBody);
+          throw new Error(`Nizam API request failed (${response.status})`);
+        }
+        const rawBody = await response.text();
+        let payload;
+        try {
+          payload = JSON.parse(rawBody);
+        } catch (parseError) {
+          console.error('[Nizam frontend] response was not valid JSON', {
+            status: response.status,
+            contentType: response.headers.get('content-type'),
+            bodyPreview: rawBody.slice(0, 500),
+            parseError
+          });
+          throw new Error('Nizam API returned malformed JSON');
+        }
+        debugTiming('browser response received', Math.round(performance.now() - clientStartedAt), 'ms');
         if (typeof payload.reply !== 'string') throw new Error('Nizam API response was invalid');
         if (!payload.reply.trim()) throw new Error('Nizam API returned an empty response');
         return {
@@ -122,6 +145,7 @@ ${roadmap}`;
         };
       } catch (error) {
         if (error.name === 'AbortError') throw error;
+        console.error('[Nizam frontend] request failed', error);
         if (isExercisePrompt(normalizedPrompt)) return { reply: fallbackExerciseReply(), resources: [] };
         if (isShockwavePrompt(normalizedPrompt)) return { reply: await fallbackShockwaveReply(), resources: [] };
         throw error;
