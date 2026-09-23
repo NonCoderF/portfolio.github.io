@@ -99,12 +99,23 @@ export function buildSystemPrompt(
       options.understanding ? `PERSONAL MEMORY NEEDED: ${String(options.understanding.needsPersonalMemory)}` : "",
       options.understanding ? `GENERAL KNOWLEDGE NEEDED: ${String(options.understanding.needsGeneralKnowledge)}` : "",
       options.understanding ? `PERSONAL CLAIMS MUST BE VERIFIED: ${String(options.understanding.personalClaimsMustBeVerified)}` : "",
+      options.understanding?.contextDependent ? `CONTEXTUAL RESOLUTION: ${options.understanding.resolvedQuestion || userPrompt}` : "",
+      options.understanding?.activeTopic ? `ACTIVE TOPIC: ${options.understanding.activeTopic}` : "",
+      options.understanding?.references?.length
+        ? `RESOLVED REFERENCES: ${options.understanding.references.map((reference) => `${reference.phrase} -> ${reference.meaning}`).join(" | ")}`
+        : "",
     ].join("\n"),
   ];
 
   if (options.retry) {
     promptParts.push(
       "REPAIR INSTRUCTION: The previous draft sounded generic or refused a personal answer incorrectly. Use the supplied context directly, answer in first person, and avoid generic learning advice or AI disclaimers.",
+    );
+  }
+
+  if (options.understanding?.contextDependent && options.understanding.resolvedQuestion) {
+    promptParts.push(
+      "CONTEXT RESOLUTION INSTRUCTION: Treat the standalone resolved question above as the meaning of the user's follow-up. Answer that meaning directly; do not ask the user to restate obvious references. Keep historical facts grounded, but freely provide predictions, comparisons, and present engineering judgment based on verified experience.",
     );
   }
 

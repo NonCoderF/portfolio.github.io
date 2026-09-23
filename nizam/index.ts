@@ -167,7 +167,7 @@ serve(async (req: Request): Promise<Response> => {
     if (OPENAI_API_KEY) {
       const understood = await callOpenAIChat(
         OPENAI_API_KEY,
-        buildUnderstandingMessages(prompt),
+        buildUnderstandingMessages(prompt, history),
         140,
         0,
       );
@@ -184,9 +184,16 @@ serve(async (req: Request): Promise<Response> => {
       personalClaimsMustBeVerified: understanding.personalClaimsMustBeVerified,
       shouldSurfaceResources: understanding.shouldSurfaceResources,
       confidence: understanding.confidence,
+      contextDependent: understanding.contextDependent,
+      resolvedQuestion: understanding.resolvedQuestion,
+      activeTopic: understanding.activeTopic,
+      references: understanding.references,
+      activeEvidenceIds: understanding.activeEvidenceIds,
+      discussedConcepts: understanding.discussedConcepts,
     });
     const scope = understanding.mode === "general" ? "general" : "personal";
-    const retrieval = await retrieveSemanticKnowledge(OPENAI_API_KEY, prompt, understanding);
+    const resolvedQuestion = understanding.resolvedQuestion || prompt;
+    const retrieval = await retrieveSemanticKnowledge(OPENAI_API_KEY, resolvedQuestion, understanding);
     logPipelineDebug(requestId, "semantic_retrieval_query", {
       query: retrieval.semanticQuery,
       strategy: retrieval.strategy,
@@ -196,7 +203,7 @@ serve(async (req: Request): Promise<Response> => {
     });
     const evidence = await selectRelevantEvidence(
       OPENAI_API_KEY,
-      prompt,
+      resolvedQuestion,
       understanding,
       retrieval.chunks,
     );
@@ -226,7 +233,7 @@ serve(async (req: Request): Promise<Response> => {
       understanding,
     });
     logPipelineDebug(requestId, "final_generation_context", {
-      question: prompt,
+      question: resolvedQuestion,
       mode: understanding.mode,
       intent: understanding.intent,
       topics: understanding.topics,
@@ -289,7 +296,7 @@ serve(async (req: Request): Promise<Response> => {
       const verificationResult = await callOpenAIChat(
         OPENAI_API_KEY,
         buildClaimVerificationMessages(
-          prompt,
+          resolvedQuestion,
           message,
           builtPrompt.resumeSections,
           chunks,
@@ -362,7 +369,7 @@ serve(async (req: Request): Promise<Response> => {
         const verificationResult = await callOpenAIChat(
           OPENAI_API_KEY,
           buildClaimVerificationMessages(
-            prompt,
+            resolvedQuestion,
             message,
             retryPrompt.resumeSections,
             chunks,
@@ -392,7 +399,9 @@ serve(async (req: Request): Promise<Response> => {
       }
     }
 
-    const evidenceResourceSelection = selectEvidenceBackedResources(understanding.topics, chunks);
+    const evidenceResourceSelection = understanding.contextDependent && !understanding.shouldSurfaceResources
+      ? { resources: [], diagnostics: [] }
+      : selectEvidenceBackedResources(understanding.topics, chunks);
     const explicitlyRequestedResources = understanding.shouldSurfaceResources
       ? resolveRelevantResources(prompt, understanding.topics, [...builtPrompt.memories, ...chunks])
       : [];
@@ -434,6 +443,15 @@ serve(async (req: Request): Promise<Response> => {
             requestId,
             knowledge: getKnowledgeDiagnostics(),
             router: understanding,
+            contextualResolution: {
+              currentMessage: prompt,
+              contextDependent: understanding.contextDependent,
+              activeTopic: understanding.activeTopic,
+              references: understanding.references,
+              resolvedSemanticQuery: resolvedQuestion,
+              activeEvidence: understanding.activeEvidenceIds,
+              freshRetrieval: retrieval.diagnostics.map(({ id, title, score }) => ({ id, title, score })),
+            },
             retrieval: {
               query: retrieval.semanticQuery,
               strategy: retrieval.strategy,

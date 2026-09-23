@@ -17,7 +17,7 @@ import { getTemporalAnswer } from "./answers/temporalAnswers.ts";
 import { getKnowledgeDiagnostics, retrieveKnowledgeChunks } from "./knowledge/fileIndex.ts";
 import { NIZAM_KNOWLEDGE } from "./knowledge/index.ts";
 import { parseQueryExpansion } from "./retrieval/queryExpansion.ts";
-import { parseQueryUnderstanding, type QueryUnderstanding } from "./retrieval/queryUnderstanding.ts";
+import { buildUnderstandingMessages, parseQueryUnderstanding, type QueryUnderstanding } from "./retrieval/queryUnderstanding.ts";
 import { cosineSimilarity, retrieveSemanticKnowledge } from "./retrieval/semanticRetriever.ts";
 import { parseEvidenceSelection } from "./retrieval/evidenceSelector.ts";
 import { parseClaimVerification } from "./answers/personalClaimVerifier.ts";
@@ -443,6 +443,40 @@ Deno.test("parses semantic query understanding for personal, general, and blende
   assertEquals(personal?.personalClaimsMustBeVerified, true);
   assertEquals(blended?.mode, "blended");
   assertEquals(general?.mode, "general");
+});
+
+Deno.test("contextual router output preserves resolved meaning and keeps standalone queries unchanged", () => {
+  const contextual = parseQueryUnderstanding(JSON.stringify({
+    mode: "blended",
+    intent: "opinion",
+    topics: ["punch detection", "exercise recognition"],
+    retrieval_queries: ["transfer squat detection reliability lessons to camera punch detection"],
+    needs_personal_memory: true,
+    needs_general_knowledge: true,
+    personal_claims_must_be_verified: true,
+    should_surface_resources: false,
+    confidence: 0.94,
+    context_dependent: true,
+    resolved_question: "Would the previously discussed squat-detection reliability problems also affect the current phone-camera punch-detection system?",
+    active_topic: "phone-camera punch detection",
+    references: [
+      { phrase: "same problems", meaning: "squat-detection false positives, orientation, lighting, pose noise, and liveness issues" },
+      { phrase: "here", meaning: "the phone-camera punch-detection system" },
+    ],
+    active_evidence_ids: ["projects-2"],
+    discussed_concepts: ["false positives", "orientation", "lighting", "liveness"],
+  }));
+  assert(contextual?.contextDependent, "contextual follow-up was not marked dependent");
+  assert(contextual?.resolvedQuestion?.includes("squat-detection"), "resolved semantic query lost the antecedent");
+  assertEquals(contextual?.references?.length, 2);
+  assertEquals(contextual?.activeEvidenceIds?.[0], "projects-2");
+
+  const standalone = buildUnderstandingMessages("What is TensorFlow Lite?", [
+    { role: "user", content: "Tell me about Android modularization." },
+    { role: "assistant", content: "I use feature boundaries and dependency direction." },
+  ]);
+  assert(standalone[1].content.includes("CURRENT USER MESSAGE"), "router did not receive current message envelope");
+  assert(standalone[1].content.includes("Android modularization"), "router did not receive recent context");
 });
 
 Deno.test("semantic mode invariants prevent blended requests from skipping personal retrieval", () => {

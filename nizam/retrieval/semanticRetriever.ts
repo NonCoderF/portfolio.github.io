@@ -29,31 +29,39 @@ export const retrieveSemanticKnowledge = async (
     return { chunks: [], strategy: "none", semanticQuery: "", diagnostics: [] };
   }
 
-  const semanticQuery = [question, ...understanding.topics, ...understanding.retrievalQueries].join("\n");
+  const semanticQuery = [understanding.resolvedQuestion || question, ...understanding.topics, ...understanding.retrievalQueries,
+    ...(understanding.discussedConcepts ?? [])].filter(Boolean).join("\n");
   if (apiKey) {
     const index = await getEmbeddingIndex(apiKey);
     const queryEmbedding = await callOpenAIEmbeddings(apiKey, [semanticQuery]);
     if (index && queryEmbedding.ok) {
+      const activeIds = new Set(understanding.activeEvidenceIds ?? []);
       const rankedWithScores = index.chunks.map((chunk, indexPosition) => ({
         chunk,
         score: cosineSimilarity(queryEmbedding.embeddings[0], index.vectors[indexPosition]),
       })).filter(({ score }) => score >= MIN_SIMILARITY)
         .sort((a, b) => b.score - a.score || (b.chunk.priority ?? 0) - (a.chunk.priority ?? 0))
-        .slice(0, MAX_RESULTS);
-      if (rankedWithScores.length > 0) {
+      const activeCandidates = index.chunks
+        .filter((chunk) => activeIds.has(chunk.id) && !rankedWithScores.some((candidate) => candidate.chunk.id === chunk.id))
+        .map((chunk) => ({ chunk, score: 0 }));
+      const rankedWithActive = [...activeCandidates, ...rankedWithScores];
+      if (rankedWithActive.length > 0) {
+        const ordered = (activeIds.size
+          ? [...rankedWithActive].sort((a, b) => Number(activeIds.has(b.chunk.id)) - Number(activeIds.has(a.chunk.id)))
+          : rankedWithActive).slice(0, MAX_RESULTS);
         return {
-          chunks: rankedWithScores.map(({ chunk }) => chunk),
+          chunks: ordered.map(({ chunk }) => chunk),
           strategy: "embedding",
           semanticQuery,
-          diagnostics: rankedWithScores.map(({ chunk, score }) => diagnosticFor(chunk, score)),
+          diagnostics: ordered.map(({ chunk, score }) => diagnosticFor(chunk, score)),
         };
       }
     }
   }
 
   const fallback = await retrieveKnowledgeChunks(
-    question,
-    [...understanding.topics, ...understanding.retrievalQueries],
+    understanding.resolvedQuestion || question,
+    [...understanding.topics, ...understanding.retrievalQueries, ...(understanding.discussedConcepts ?? [])],
     MAX_RESULTS,
   );
   return {
