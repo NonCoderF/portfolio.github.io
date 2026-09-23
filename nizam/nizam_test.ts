@@ -19,7 +19,7 @@ import { NIZAM_KNOWLEDGE } from "./knowledge/index.ts";
 import { parseQueryExpansion } from "./retrieval/queryExpansion.ts";
 import { buildUnderstandingMessages, parseQueryUnderstanding, type QueryUnderstanding } from "./retrieval/queryUnderstanding.ts";
 import { cosineSimilarity, retrieveSemanticKnowledge } from "./retrieval/semanticRetriever.ts";
-import { parseEvidenceSelection } from "./retrieval/evidenceSelector.ts";
+import { parseEvidenceSelection, selectRelevantEvidence } from "./retrieval/evidenceSelector.ts";
 import { parseClaimVerification } from "./answers/personalClaimVerifier.ts";
 import {
   detectTemporalIntent,
@@ -477,6 +477,28 @@ Deno.test("contextual router output preserves resolved meaning and keeps standal
   ]);
   assert(standalone[1].content.includes("CURRENT USER MESSAGE"), "router did not receive current message envelope");
   assert(standalone[1].content.includes("Android modularization"), "router did not receive recent context");
+});
+
+Deno.test("context-aware fallback reranking prefers the active specific subject over broad background", async () => {
+  const candidates = await retrieveKnowledgeChunks("problems faced Android experience exercise recognition Vantage Circle", [
+    "exercise recognition pose validation false positives lighting orientation liveness",
+  ], 10);
+  const understanding = testUnderstanding({
+    mode: "personal",
+    intent: "technical_experience",
+    topics: ["exercise recognition", "squat detection"],
+    retrievalQueries: ["real-world exercise recognition failures and validation"],
+    needsPersonalMemory: true,
+    personalClaimsMustBeVerified: true,
+    contextDependent: true,
+    resolvedQuestion: "What problems did Nizam face while building the Adaptive Exercise Recognition system?",
+    activeTopic: "Adaptive Exercise Recognition / squat detection",
+    discussedConcepts: ["false positives", "orientation", "lighting", "pose landmarks", "liveness"],
+  });
+  const selected = await selectRelevantEvidence(undefined, understanding.resolvedQuestion!, understanding, candidates);
+  assert(selected.chunks.length > 0, "contextual reranker selected no evidence");
+  assert(/exercise|pose|squat|recognition/i.test(`${selected.chunks[0].title} ${selected.chunks[0].content}`),
+    "broad background outranked the active exercise-recognition subject");
 });
 
 Deno.test("semantic mode invariants prevent blended requests from skipping personal retrieval", () => {

@@ -1,6 +1,7 @@
 import type { KnowledgeChunk } from "../knowledge/fileIndex.ts";
-import { callOpenAIChat, type OpenAIMessage } from "../openaiClient.ts";
+import { callOpenAIChat, type OpenAIMessage, type RemoteCallMetrics } from "../openaiClient.ts";
 import type { QueryUnderstanding } from "./queryUnderstanding.ts";
+import { normalizeQuery, tokenize } from "./queryNormalizer.ts";
 
 export type EvidenceConnection = {
   evidenceId: string;
@@ -20,6 +21,7 @@ export const selectRelevantEvidence = async (
   question: string,
   understanding: QueryUnderstanding,
   candidates: KnowledgeChunk[],
+  metrics?: RemoteCallMetrics,
 ): Promise<EvidenceSelection> => {
   if (!understanding.needsPersonalMemory || candidates.length === 0) {
     return { chunks: [], connections: [], strategy: "none" };
@@ -34,6 +36,7 @@ export const selectRelevantEvidence = async (
     buildEvidenceSelectionMessages(question, understanding, candidates),
     320,
     0,
+    { ...metrics, purpose: "evidence_reranking" },
   );
   if (!result.ok) {
     return { chunks: fallbackEvidence(candidates, understanding), connections: [], strategy: "retrieval_order" };
@@ -54,7 +57,22 @@ const fallbackEvidence = (
   const useful = reasoningIntent
     ? candidates.filter((chunk) => !["conversation", "faq", "privacy", "identity"].includes(chunk.category))
     : candidates;
-  return (useful.length ? useful : candidates).slice(0, 3);
+  const pool = useful.length ? useful : candidates;
+  const activeIds = new Set(understanding.activeEvidenceIds ?? []);
+  const contextText = normalizeQuery([
+    understanding.activeTopic ?? "",
+    ...(understanding.discussedConcepts ?? []),
+    ...(understanding.topics ?? []),
+    ...(understanding.retrievalQueries ?? []),
+  ].join(" "));
+  const contextTokens = new Set(tokenize(contextText));
+  return pool.map((chunk, index) => {
+    const candidateTokens = new Set(tokenize(normalizeQuery([
+      chunk.title ?? "", chunk.category, ...(chunk.topics ?? []), ...(chunk.keywords ?? []), chunk.content,
+    ].join(" "))));
+    const overlap = [...contextTokens].filter((token) => candidateTokens.has(token)).length;
+    return { chunk, score: (activeIds.has(chunk.id) ? 1000 : 0) + overlap * 10 - index / 100 };
+  }).sort((a, b) => b.score - a.score).slice(0, 3).map(({ chunk }) => chunk);
 };
 
 export const buildEvidenceSelectionMessages = (
@@ -66,6 +84,8 @@ export const buildEvidenceSelectionMessages = (
     role: "system",
     content: `Select only verified Nizam evidence that materially helps answer the current question.
 
+Rank against the RESOLVED QUESTION, ACTIVE TOPIC, RECENT CONCEPTS, and PRIOR VERIFIED EVIDENCE together. The active topic is a strong contextual relevance signal: when a specific project or module is being discussed, prefer evidence describing that project's concrete failures and decisions over broad employer or technology background that only shares generic words. Prior evidence is a contextual prior, not a permanent filter; follow a clear topic change. Prefer the most specific candidate that answers the resolved subject, and do not select unrelated background merely because it matches a generic word such as "problems" or "experience".
+
 For personal factual questions, select evidence that directly supports the requested claim.
 For blended questions, evidence may be directly relevant or analogically relevant: it should change how an experienced Nizam would reason about the new problem, not merely share a broad technology word.
 Reject background that would only decorate a generic answer. For selected evidence, extract 1-4 concrete transferable lessons from decisions, failures, constraints, trade-offs, edge cases, or debugging experience stated in that evidence. Do not return generic shared-technology descriptions as lessons.
@@ -76,7 +96,7 @@ Select at most 3 items. Empty selection is valid.`,
   },
   {
     role: "user",
-    content: `QUESTION:\n${question}\n\nMODE: ${understanding.mode}\nINTENT: ${understanding.intent}\nTOPICS: ${understanding.topics.join(", ")}\n\nCANDIDATE VERIFIED EVIDENCE:\n${candidates.map(formatCandidate).join("\n\n")}`,
+    content: `RESOLVED QUESTION:\n${question}\n\nMODE: ${understanding.mode}\nINTENT: ${understanding.intent}\nACTIVE TOPIC: ${understanding.activeTopic || "none"}\nRECENT CONCEPTS: ${(understanding.discussedConcepts ?? []).join(", ") || "none"}\nTOPICS: ${understanding.topics.join(", ")}\nPRIOR VERIFIED EVIDENCE (a contextual prior, not a lock): ${(understanding.activeEvidenceIds ?? []).join(", ") || "none"}\n\nCANDIDATE VERIFIED EVIDENCE:\n${candidates.map(formatCandidate).join("\n\n")}`,
   },
 ];
 
@@ -123,4 +143,4 @@ export const parseEvidenceSelection = (
 };
 
 const formatCandidate = (chunk: KnowledgeChunk): string =>
-  `[${chunk.id}] ${chunk.title ?? chunk.category}\n${chunk.content.slice(0, 1400)}`;
+  `[${chunk.id}] title=${chunk.title ?? ""}; category=${chunk.category}; type=${chunk.type}; topics=${chunk.topics.join(", ")}; keywords=${chunk.keywords.join(", ")}; verified=${String(chunk.verified)}\n${chunk.content.slice(0, 1800)}`;

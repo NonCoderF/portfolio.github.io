@@ -19,7 +19,7 @@ import { buildFallbackUnderstanding, buildUnderstandingMessages, parseQueryUnder
 import { retrieveSemanticKnowledge } from "./retrieval/semanticRetriever.ts";
 import { selectRelevantEvidence } from "./retrieval/evidenceSelector.ts";
 import { resolveTemporalState } from "./temporal/temporalFacts.ts";
-import { createPipelineRequestId, logPipelineDebug } from "./debug/pipelineDebug.ts";
+import { addPerformanceStage, createPerformanceTrace, createPipelineRequestId, logPerformanceTrace, logPipelineDebug } from "./debug/pipelineDebug.ts";
 
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
 const DIGITAL_NIZAM_DEBUG_TOKEN = Deno.env.get("DIGITAL_NIZAM_DEBUG_TOKEN");
@@ -83,6 +83,8 @@ serve(async (req: Request): Promise<Response> => {
 
   try {
     const requestId = createPipelineRequestId();
+    const performanceTrace = createPerformanceTrace();
+    const remoteMetrics = { llmCalls: performanceTrace.llmCalls, embeddingCalls: performanceTrace.embeddingCalls };
     const includeDebugTrace = isAuthorizedDebugRequest(req);
     logPipelineDebug(requestId, "knowledge_initialization", getKnowledgeDiagnostics());
     const { prompt, history, historyWasInvalid } = await readRequest(req);
@@ -164,15 +166,18 @@ serve(async (req: Request): Promise<Response> => {
     }
 
     let understanding: QueryUnderstanding | null = null;
+    const routerStartedAt = performance.now();
     if (OPENAI_API_KEY) {
       const understood = await callOpenAIChat(
         OPENAI_API_KEY,
         buildUnderstandingMessages(prompt, history),
         140,
         0,
+        { ...remoteMetrics, purpose: "contextual_understanding" },
       );
       if (understood.ok) understanding = parseQueryUnderstanding(understood.message);
     }
+    addPerformanceStage(performanceTrace, "contextResolutionMs", routerStartedAt);
     understanding ??= buildFallbackUnderstanding(localScope, detected.intent);
     logPipelineDebug(requestId, "router", {
       mode: understanding.mode,
@@ -193,7 +198,10 @@ serve(async (req: Request): Promise<Response> => {
     });
     const scope = understanding.mode === "general" ? "general" : "personal";
     const resolvedQuestion = understanding.resolvedQuestion || prompt;
-    const retrieval = await retrieveSemanticKnowledge(OPENAI_API_KEY, resolvedQuestion, understanding);
+    const retrievalStartedAt = performance.now();
+    const retrieval = await retrieveSemanticKnowledge(OPENAI_API_KEY, resolvedQuestion, understanding, remoteMetrics);
+    addPerformanceStage(performanceTrace, "retrievalMs", retrievalStartedAt);
+    performanceTrace.stages.embeddingMs = retrieval.embeddingMs ?? 0;
     logPipelineDebug(requestId, "semantic_retrieval_query", {
       query: retrieval.semanticQuery,
       strategy: retrieval.strategy,
@@ -201,16 +209,34 @@ serve(async (req: Request): Promise<Response> => {
     logPipelineDebug(requestId, "raw_retrieval_results", {
       results: retrieval.diagnostics,
     });
+    const rerankingStartedAt = performance.now();
     const evidence = await selectRelevantEvidence(
       OPENAI_API_KEY,
       resolvedQuestion,
       understanding,
       retrieval.chunks,
+      remoteMetrics,
     );
+    addPerformanceStage(performanceTrace, "rerankingMs", rerankingStartedAt);
     logPipelineDebug(requestId, "reranked_personal_evidence", {
       strategy: evidence.strategy,
+      resolvedQuestion,
+      activeTopic: understanding.activeTopic,
+      activeEvidenceIds: understanding.activeEvidenceIds,
+      recentConcepts: understanding.discussedConcepts,
       candidates: retrieval.diagnostics.map(({ id, title, score }) => ({ id, title, score })),
+      rerankedCandidates: evidence.chunks.map((chunk, rank) => ({
+        id: chunk.id,
+        title: chunk.title,
+        rank: rank + 1,
+        retrievalScore: retrieval.diagnostics.find((candidate) => candidate.id === chunk.id)?.score ?? null,
+      })),
       selected: evidence.chunks.map((chunk) => ({ id: chunk.id, title: chunk.title })),
+      whySelected: evidence.connections.map((connection) => ({
+        evidenceId: connection.evidenceId,
+        relevance: connection.relevance,
+        reason: connection.informsReasoning,
+      })),
       rejectedIds: retrieval.chunks.filter((candidate) =>
         !evidence.chunks.some((selected) => selected.id === candidate.id)
       ).map((chunk) => chunk.id),
@@ -227,11 +253,13 @@ serve(async (req: Request): Promise<Response> => {
     const chunks = evidence.chunks;
     logTemporalConflictWarnings(chunks);
 
+    const promptStartedAt = performance.now();
     const builtPrompt = buildSystemPrompt(prompt, {
       knowledgeChunks: chunks,
       evidenceConnections: evidence.connections,
       understanding,
     });
+    addPerformanceStage(performanceTrace, "promptAssemblyMs", promptStartedAt);
     logPipelineDebug(requestId, "final_generation_context", {
       question: resolvedQuestion,
       mode: understanding.mode,
@@ -265,7 +293,9 @@ serve(async (req: Request): Promise<Response> => {
     let unsupportedClaims: string[] = [];
     let synthesisFeedback: string[] = [];
     const validationDiagnostics: Record<string, unknown> = {};
-    let generated = await callOpenAIChat(OPENAI_API_KEY, messages);
+    const generationStartedAt = performance.now();
+    let generated = await callOpenAIChat(OPENAI_API_KEY, messages, 600, 0.7, { ...remoteMetrics, purpose: "final_generation" });
+    addPerformanceStage(performanceTrace, "finalGenerationMs", generationStartedAt);
 
     if (!generated.ok) {
       console.error("OpenAI error status:", generated.status);
@@ -293,6 +323,7 @@ serve(async (req: Request): Promise<Response> => {
     const requiresClaimVerification = understanding.mode === "personal" || chunks.length > 0 ||
       containsAffirmativeHistoricalClaim(message);
     if (understanding.personalClaimsMustBeVerified && requiresClaimVerification) {
+      const claimVerificationStartedAt = performance.now();
       const verificationResult = await callOpenAIChat(
         OPENAI_API_KEY,
         buildClaimVerificationMessages(
@@ -304,6 +335,7 @@ serve(async (req: Request): Promise<Response> => {
         ),
         160,
         0,
+        { ...remoteMetrics, purpose: "claim_verification" },
       );
       const verification = verificationResult.ok
         ? parseClaimVerification(verificationResult.message)
@@ -316,6 +348,7 @@ serve(async (req: Request): Promise<Response> => {
         synthesisFeedback = verification.synthesisFeedback;
         validation = { ok: false, kind: "personal", reason: "insufficient_experience_transfer" };
       }
+      performanceTrace.stages.claimVerificationMs = Math.round((performance.now() - claimVerificationStartedAt) * 100) / 100;
     }
 
     if (!validation.ok) {
@@ -341,7 +374,9 @@ serve(async (req: Request): Promise<Response> => {
         },
       ];
 
-      generated = await callOpenAIChat(OPENAI_API_KEY, retryMessages);
+      const retryGenerationStartedAt = performance.now();
+      generated = await callOpenAIChat(OPENAI_API_KEY, retryMessages, 600, 0.7, { ...remoteMetrics, purpose: "retry_generation" });
+      performanceTrace.stages.retryGenerationMs = Math.round((performance.now() - retryGenerationStartedAt) * 100) / 100;
 
       if (!generated.ok) {
         console.error("OpenAI retry error status:", generated.status);
@@ -366,6 +401,7 @@ serve(async (req: Request): Promise<Response> => {
       const retryRequiresClaimVerification = understanding.mode === "personal" || chunks.length > 0 ||
         containsAffirmativeHistoricalClaim(message);
       if (validation.ok && understanding.personalClaimsMustBeVerified && retryRequiresClaimVerification) {
+        const retryClaimVerificationStartedAt = performance.now();
         const verificationResult = await callOpenAIChat(
           OPENAI_API_KEY,
           buildClaimVerificationMessages(
@@ -377,6 +413,7 @@ serve(async (req: Request): Promise<Response> => {
           ),
           160,
           0,
+          { ...remoteMetrics, purpose: "retry_claim_verification" },
         );
         const verification = verificationResult.ok
           ? parseClaimVerification(verificationResult.message)
@@ -387,6 +424,7 @@ serve(async (req: Request): Promise<Response> => {
         } else if (verification && !verification.experienceInformed) {
           validation = { ok: false, kind: "personal", reason: "insufficient_experience_transfer_after_retry" };
         }
+        performanceTrace.stages.retryClaimVerificationMs = Math.round((performance.now() - retryClaimVerificationStartedAt) * 100) / 100;
       }
 
       if (!validation.ok && retryPrompt.scope === "personal") {
@@ -399,6 +437,7 @@ serve(async (req: Request): Promise<Response> => {
       }
     }
 
+    const resourceStartedAt = performance.now();
     const evidenceResourceSelection = understanding.contextDependent && !understanding.shouldSurfaceResources
       ? { resources: [], diagnostics: [] }
       : selectEvidenceBackedResources(understanding.topics, chunks);
@@ -410,6 +449,7 @@ serve(async (req: Request): Promise<Response> => {
         all.findIndex((candidate) => candidate.type === resource.type && candidate.id === resource.id) === index
       )
       .slice(0, 1);
+    addPerformanceStage(performanceTrace, "resourceSelectionMs", resourceStartedAt);
     logPipelineDebug(requestId, "resource_selection", {
       requested: understanding.shouldSurfaceResources,
       candidates: evidenceResourceSelection.diagnostics,
@@ -434,7 +474,7 @@ serve(async (req: Request): Promise<Response> => {
       validationRetryUsed,
     });
 
-    return jsonResponse({
+    const responsePayload = {
       reply: message,
       resources,
       ...(includeDebugTrace
@@ -480,7 +520,18 @@ serve(async (req: Request): Promise<Response> => {
           },
         }
         : {}),
+    };
+    const serializationStartedAt = performance.now();
+    const response = jsonResponse(responsePayload);
+    addPerformanceStage(performanceTrace, "serializationMs", serializationStartedAt);
+    logPerformanceTrace(requestId, performanceTrace, {
+      retrievalCandidateCount: retrieval.chunks.length,
+      rerankerCandidateCount: retrieval.chunks.length,
+      selectedEvidenceCount: chunks.length,
+      promptTokenEstimate: builtPrompt.estimatedTokens,
+      conversationHistorySize: history.length,
     });
+    return response;
   } catch (err) {
     console.error("Edge function error:", err);
 

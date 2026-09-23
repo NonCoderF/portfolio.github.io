@@ -1,5 +1,5 @@
 import { buildKnowledgeIndex, retrieveKnowledgeChunks, type KnowledgeChunk } from "../knowledge/fileIndex.ts";
-import { callOpenAIEmbeddings } from "../openaiClient.ts";
+import { callOpenAIEmbeddings, type RemoteCallMetrics } from "../openaiClient.ts";
 import type { QueryUnderstanding } from "./queryUnderstanding.ts";
 
 const MAX_RESULTS = 10;
@@ -11,6 +11,7 @@ export type SemanticRetrievalResult = {
   strategy: "embedding" | "semantic_terms" | "none";
   semanticQuery: string;
   diagnostics: RetrievalDiagnostic[];
+  embeddingMs?: number;
 };
 
 export type RetrievalDiagnostic = {
@@ -24,6 +25,7 @@ export const retrieveSemanticKnowledge = async (
   apiKey: string | undefined,
   question: string,
   understanding: QueryUnderstanding,
+  metrics?: RemoteCallMetrics,
 ): Promise<SemanticRetrievalResult> => {
   if (!understanding.needsPersonalMemory) {
     return { chunks: [], strategy: "none", semanticQuery: "", diagnostics: [] };
@@ -32,8 +34,12 @@ export const retrieveSemanticKnowledge = async (
   const semanticQuery = [understanding.resolvedQuestion || question, ...understanding.topics, ...understanding.retrievalQueries,
     ...(understanding.discussedConcepts ?? [])].filter(Boolean).join("\n");
   if (apiKey) {
-    const index = await getEmbeddingIndex(apiKey);
-    const queryEmbedding = await callOpenAIEmbeddings(apiKey, [semanticQuery]);
+    const embeddingStartedAt = performance.now();
+    const [index, queryEmbedding] = await Promise.all([
+      getEmbeddingIndex(apiKey, metrics),
+      callOpenAIEmbeddings(apiKey, [semanticQuery], { ...metrics, purpose: "query_embedding" }),
+    ]);
+    const embeddingMs = Math.round((performance.now() - embeddingStartedAt) * 100) / 100;
     if (index && queryEmbedding.ok) {
       const activeIds = new Set(understanding.activeEvidenceIds ?? []);
       const rankedWithScores = index.chunks.map((chunk, indexPosition) => ({
@@ -53,6 +59,7 @@ export const retrieveSemanticKnowledge = async (
           chunks: ordered.map(({ chunk }) => chunk),
           strategy: "embedding",
           semanticQuery,
+          embeddingMs,
           diagnostics: ordered.map(({ chunk, score }) => diagnosticFor(chunk, score)),
         };
       }
@@ -81,6 +88,7 @@ const diagnosticFor = (chunk: KnowledgeChunk, score: number | null): RetrievalDi
 
 const getEmbeddingIndex = async (
   apiKey: string,
+  metrics?: RemoteCallMetrics,
 ): Promise<{ chunks: KnowledgeChunk[]; vectors: number[][] } | null> => {
   if (!cachedChunkEmbeddings) {
     cachedChunkEmbeddings = (async () => {
@@ -88,7 +96,7 @@ const getEmbeddingIndex = async (
       const inputs = chunks.map((chunk) =>
         [chunk.title, chunk.category, chunk.keywords.join(", "), chunk.content].filter(Boolean).join("\n").slice(0, 2400)
       );
-      const result = await callOpenAIEmbeddings(apiKey, inputs);
+      const result = await callOpenAIEmbeddings(apiKey, inputs, { purpose: "knowledge_index_embeddings", ...metrics });
       return result.ok ? { chunks, vectors: result.embeddings } : null;
     })();
   }

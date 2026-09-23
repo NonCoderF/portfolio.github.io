@@ -13,12 +13,25 @@ export type OpenAIEmbeddingResult =
   | { ok: true; embeddings: number[][] }
   | { ok: false; status: number; body: string };
 
+export type RemoteCallMetrics = {
+  llmCalls?: Array<{ purpose: string; model: string; inputChars: number; maxOutputTokens: number }>;
+  embeddingCalls?: Array<{ purpose: string; inputCount: number; inputChars: number }>;
+  purpose?: string;
+};
+
 export const callOpenAIChat = async (
   apiKey: string,
   messages: OpenAIMessage[],
   maxTokens = 600,
   temperature = 0.7,
+  metrics?: RemoteCallMetrics,
 ): Promise<OpenAIResult> => {
+  metrics?.llmCalls?.push({
+    purpose: metrics.purpose ?? "chat",
+    model: "gpt-4o-mini",
+    inputChars: messages.reduce((sum, message) => sum + message.content.length, 0),
+    maxOutputTokens: maxTokens,
+  });
   const openAIResponse = await fetch(
     "https://api.openai.com/v1/chat/completions",
     {
@@ -55,7 +68,13 @@ export const callOpenAIChat = async (
 export const callOpenAIEmbeddings = async (
   apiKey: string,
   inputs: string[],
+  metrics?: RemoteCallMetrics,
 ): Promise<OpenAIEmbeddingResult> => {
+  metrics?.embeddingCalls?.push({
+    purpose: metrics.purpose ?? "embeddings",
+    inputCount: inputs.length,
+    inputChars: inputs.reduce((sum, input) => sum + input.length, 0),
+  });
   const response = await fetch("https://api.openai.com/v1/embeddings", {
     method: "POST",
     headers: {
