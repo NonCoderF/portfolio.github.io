@@ -15,7 +15,7 @@ html {
 @media (max-width: 767px) {
   body {
     padding-left: 12px;
-    padding-right: 12px;
+    padding-right: 0;
   }
 
   html {
@@ -28,7 +28,7 @@ html {
 
   .site-header {
     left: 12px;
-    right: 12px;
+    right: 0;
   }
 
   .back-top {
