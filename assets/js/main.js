@@ -428,6 +428,9 @@
   $$('.assistant-prompts button,.prompt-list button').forEach(button => button.addEventListener('click', () => askAssistant(button.textContent)));
   $('.assistant-inline-open')?.addEventListener('click', event => { event.preventDefault(); openAssistant(); renderMemoryHistory(); });
   assistantForm?.addEventListener('submit', event => { event.preventDefault(); const prompt = assistantInput?.value.trim(); if (!prompt) return; assistantInput.value = ''; askAssistant(prompt); });
+  assistantSend?.addEventListener('pointerdown', event => {
+    if (document.activeElement === assistantInput) event.preventDefault();
+  });
   assistantTrigger?.addEventListener('click', () => {
     if (assistant?.classList.contains('open')) renderMemoryHistory().then(() => initializeAssistantScroll(true));
   });
