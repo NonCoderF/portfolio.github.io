@@ -287,6 +287,11 @@ body.digital-me-open {
   overscroll-behavior: none;
 }
 
+html,
+body {
+  overscroll-behavior-y: none;
+}
+
 .digital-me-open .scroll-indicator,
 .digital-me-open .back-top {
   display: none !important;
@@ -298,6 +303,8 @@ body.digital-me-open {
   width: auto !important;
   height: 100dvh;
   z-index: 9000;
+  overflow: hidden;
+  overscroll-behavior: none;
   pointer-events: auto;
 }
 
@@ -426,6 +433,11 @@ body.digital-me-open {
 .assistant-shell.open .assistant-prompts {
   max-height: none;
   overflow: visible;
+}
+
+.assistant-shell.open .ai-code-block {
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .assistant-shell.open .assistant-form {
