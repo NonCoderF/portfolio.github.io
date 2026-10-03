@@ -114,21 +114,25 @@
   // Let the scroll thumb behave like a small native scrollbar handle.
   if (scrollIndicator && scrollThumb) {
     let dragging = false;
-    const scrollFromPointer = clientY => {
+    let dragOffset = 0;
+    const scrollFromPointer = (clientY, offset = null) => {
       const rail = scrollTrack.getBoundingClientRect();
       const thumb = scrollThumb.getBoundingClientRect();
       const travel = Math.max(1, rail.height - thumb.height);
-      const position = Math.min(travel, Math.max(0, clientY - rail.top - thumb.height / 2));
+      const grabOffset = offset == null ? thumb.height / 2 : offset;
+      const position = Math.min(travel, Math.max(0, clientY - rail.top - grabOffset));
       const max = document.documentElement.scrollHeight - innerHeight;
       window.scrollTo({ top: (position / travel) * max, behavior: 'auto' });
     };
     scrollThumb.addEventListener('pointerdown', event => {
       dragging = true;
+      const thumbRect = scrollThumb.getBoundingClientRect();
+      dragOffset = Math.min(thumbRect.height, Math.max(0, event.clientY - thumbRect.top));
       scrollIndicator.classList.add('is-dragging');
       scrollThumb.setPointerCapture?.(event.pointerId);
       event.preventDefault();
     });
-    scrollThumb.addEventListener('pointermove', event => { if (dragging) scrollFromPointer(event.clientY); });
+    scrollThumb.addEventListener('pointermove', event => { if (dragging) scrollFromPointer(event.clientY, dragOffset); });
     const stopDragging = () => { dragging = false; scrollIndicator.classList.remove('is-dragging'); };
     scrollThumb.addEventListener('pointerup', stopDragging);
     scrollThumb.addEventListener('pointercancel', stopDragging);
