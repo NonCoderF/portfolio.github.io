@@ -2,166 +2,23 @@
   'use strict';
   const $ = (s, root = document) => root.querySelector(s);
   const $$ = (s, root = document) => [...root.querySelectorAll(s)];
-  const header = $('.site-header'), backTop = $('.back-top'), progress = $('#progress-bar');
-  const scrollIndicator = $('.scroll-indicator'), scrollTrack = $('.scroll-indicator-track'), scrollThumb = $('.scroll-indicator-thumb'), scrollHotspots = $('.scroll-hotspots');
+  const header = $('.site-header'), backTop = $('.back-top');
   $('#year').textContent = new Date().getFullYear();
 
   const menu = $('.menu-toggle'), nav = $('.desktop-nav');
   menu?.addEventListener('click', () => { const open = nav.classList.toggle('open'); menu.setAttribute('aria-expanded', open); menu.innerHTML = `<i class="bi bi-${open ? 'x' : 'list'}"></i>`; });
   $$('.desktop-nav a').forEach(link => link.addEventListener('click', () => { nav.classList.remove('open'); menu?.setAttribute('aria-expanded', 'false'); menu.innerHTML = '<i class="bi bi-list"></i>'; }));
 
-  let lastScrollY = window.scrollY, scrollIdleTimer, scrollFrame = 0;
+  let lastScrollY = window.scrollY;
   function onScroll() {
     const y = window.scrollY;
-    if (scrollIndicator && y !== lastScrollY) {
-      scrollIndicator.classList.add('is-active');
-      clearTimeout(scrollIdleTimer);
-      scrollIdleTimer = setTimeout(() => scrollIndicator.classList.remove('is-active'), 450);
-      lastScrollY = y;
-    }
+    lastScrollY = y;
     header?.classList.toggle('scrolled', y > 20);
     backTop?.classList.toggle('visible', y > 600);
-    const max = Math.max(0, document.documentElement.scrollHeight - innerHeight);
-    const ratio = max > 0 ? Math.min(1, Math.max(0, y / max)) : 0;
-    if (progress) progress.style.width = `${ratio * 100}%`;
-    if (scrollFrame) return;
-    scrollFrame = requestAnimationFrame(() => {
-      scrollFrame = 0;
-      if (!scrollTrack || !scrollThumb || !scrollIndicator) return;
-      const trackHeight = scrollTrack.clientHeight;
-      const viewportRatio = innerHeight / Math.max(document.documentElement.scrollHeight, innerHeight);
-      const minThumbHeight = parseFloat(getComputedStyle(scrollThumb).minHeight) || 42;
-      const thumbHeight = Math.min(trackHeight, Math.max(minThumbHeight, trackHeight * viewportRatio));
-      const trackTravel = Math.max(0, trackHeight - thumbHeight);
-      const trackOffset = scrollTrack.getBoundingClientRect().top - scrollIndicator.getBoundingClientRect().top;
-      scrollThumb.style.height = `${thumbHeight}px`;
-      scrollThumb.style.top = `${trackOffset + ratio * trackTravel}px`;
-      scrollIndicator.setAttribute('aria-valuenow', `${Math.round(ratio * 100)}`);
-    });
   }
   addEventListener('scroll', onScroll, { passive: true });
   addEventListener('resize', onScroll, { passive: true });
   onScroll();
-
-  // Semantic scrollbar map: configuration names real sections; layout supplies their positions.
-  const scrollSectionConfig = [
-    { id: 'hero', label: 'Home' },
-    { id: 'about', label: 'About' },
-    { id: 'work', label: 'Projects' },
-    { id: 'adaptive-exercise-recognition', label: 'Case Study' },
-    { id: 'digital-nizam', label: 'Digital Me' },
-    { id: 'flutter-journey', label: 'Flutter' },
-    { id: 'ai-engineering', label: 'AI' },
-    { id: 'skills', label: 'Skills' },
-    { id: 'contact', label: 'Contact' },
-    { id: 'shockwave', label: 'Shockwave' }
-  ];
-  const scrollSections = scrollSectionConfig.map(config => {
-    const element = document.getElementById(config.id);
-    if (!element) return null;
-    element.dataset.scrollSection = '';
-    return { ...config, element };
-  }).filter(Boolean);
-  const hotspotById = new Map();
-  const clamp = value => Math.min(1, Math.max(0, value));
-  const layoutHotspots = () => {
-    if (!scrollHotspots || !scrollTrack) return;
-    const trackRect = scrollTrack.getBoundingClientRect();
-    const indicatorRect = scrollIndicator.getBoundingClientRect();
-    if (!trackRect.height) return;
-    const trackOffset = trackRect.top - indicatorRect.top;
-    const scrollableHeight = Math.max(1, document.documentElement.scrollHeight - innerHeight);
-    scrollSections.forEach(section => {
-      const sectionTop = section.element.getBoundingClientRect().top + window.scrollY;
-      const progress = clamp(sectionTop / scrollableHeight);
-      const hotspot = hotspotById.get(section.id);
-      if (hotspot) hotspot.style.top = `${trackOffset + progress * trackRect.height}px`;
-    });
-  };
-  const scheduleHotspotLayout = (() => {
-    let frame = 0;
-    return () => {
-      if (frame) return;
-      frame = requestAnimationFrame(() => { frame = 0; layoutHotspots(); });
-    };
-  })();
-  if (scrollHotspots) {
-    scrollSections.forEach(section => {
-      const hotspot = document.createElement('button');
-      hotspot.type = 'button';
-      hotspot.className = 'scroll-hotspot';
-      hotspot.dataset.sectionId = section.id;
-      hotspot.setAttribute('aria-label', `Scroll to ${section.label}`);
-      hotspot.title = section.label;
-      hotspot.addEventListener('click', () => section.element.scrollIntoView({ behavior: 'smooth', block: 'start' }));
-      scrollHotspots.appendChild(hotspot);
-      hotspotById.set(section.id, hotspot);
-    });
-    scheduleHotspotLayout();
-    addEventListener('load', scheduleHotspotLayout, { once: true });
-    document.fonts?.ready.then(scheduleHotspotLayout);
-    const sectionResizeObserver = 'ResizeObserver' in window ? new ResizeObserver(scheduleHotspotLayout) : null;
-    sectionResizeObserver?.observe(document.documentElement);
-    scrollSections.forEach(section => sectionResizeObserver?.observe(section.element));
-    const activeSectionObserver = new IntersectionObserver(entries => {
-      entries.filter(entry => entry.isIntersecting).forEach(entry => {
-        hotspotById.forEach((hotspot, id) => hotspot.classList.toggle('is-active', id === entry.target.id));
-      });
-    }, { rootMargin: '-28% 0px -58% 0px', threshold: 0 });
-    scrollSections.forEach(section => activeSectionObserver.observe(section.element));
-  }
-
-  // Let the scroll thumb behave like a small native scrollbar handle.
-  if (scrollIndicator && scrollThumb) {
-    let dragging = false;
-    let dragOffset = 0;
-    const scrollFromPointer = (clientY, offset = null) => {
-      const rail = scrollTrack.getBoundingClientRect();
-      const thumb = scrollThumb.getBoundingClientRect();
-      const travel = Math.max(1, rail.height - thumb.height);
-      const grabOffset = offset == null ? thumb.height / 2 : offset;
-      const position = Math.min(travel, Math.max(0, clientY - rail.top - grabOffset));
-      const max = document.documentElement.scrollHeight - innerHeight;
-      window.scrollTo({ top: (position / travel) * max, behavior: 'auto' });
-    };
-    scrollThumb.addEventListener('pointerdown', event => {
-      dragging = true;
-      const thumbRect = scrollThumb.getBoundingClientRect();
-      dragOffset = Math.min(thumbRect.height, Math.max(0, event.clientY - thumbRect.top));
-      scrollIndicator.classList.add('is-dragging');
-      scrollThumb.setPointerCapture?.(event.pointerId);
-      event.preventDefault();
-    });
-    scrollThumb.addEventListener('pointermove', event => { if (dragging) scrollFromPointer(event.clientY, dragOffset); });
-    const stopDragging = () => { dragging = false; scrollIndicator.classList.remove('is-dragging'); };
-    scrollThumb.addEventListener('pointerup', stopDragging);
-    scrollThumb.addEventListener('pointercancel', stopDragging);
-    scrollIndicator.addEventListener('pointerdown', event => { if (event.target !== scrollThumb && !event.target.closest('.scroll-hotspot')) scrollFromPointer(event.clientY); });
-    scrollIndicator.addEventListener('keydown', event => {
-      const amount = innerHeight * .8;
-      if (event.key === 'ArrowDown' || event.key === 'PageDown') { event.preventDefault(); window.scrollBy({ top: amount, behavior: 'smooth' }); }
-      if (event.key === 'ArrowUp' || event.key === 'PageUp') { event.preventDefault(); window.scrollBy({ top: -amount, behavior: 'smooth' }); }
-      if (event.key === 'Home') { event.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
-      if (event.key === 'End') { event.preventDefault(); window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' }); }
-    });
-  }
-
-  // Short, rate-limited haptic ticks make manual mobile scrolling feel tangible.
-  const touchDevice = matchMedia('(pointer:coarse)').matches;
-  if (touchDevice && 'vibrate' in navigator) {
-    let touchScrolling = false, lastHapticY = window.scrollY, lastHapticAt = 0;
-    addEventListener('touchstart', () => { touchScrolling = true; lastHapticY = window.scrollY; }, { passive: true });
-    addEventListener('touchend', () => { touchScrolling = false; }, { passive: true });
-    addEventListener('scroll', () => {
-      if (!touchScrolling) return;
-      const now = performance.now(), distance = Math.abs(window.scrollY - lastHapticY);
-      if (distance >= 90 && now - lastHapticAt > 140) {
-        navigator.vibrate(8);
-        lastHapticY = window.scrollY;
-        lastHapticAt = now;
-      }
-    }, { passive: true });
-  }
 
   const sections = $$('main section[id]'), links = $$('.desktop-nav a');
   const observer = new IntersectionObserver(entries => entries.forEach(entry => { if (entry.isIntersecting) { links.forEach(a => a.classList.toggle('active', a.hash === `#${entry.target.id}`)); } }), { rootMargin: '-35% 0px -55% 0px' });
@@ -323,7 +180,6 @@
     assistantTrigger?.setAttribute('aria-expanded', 'false');
     assistantTrigger?.focus();
     window.scrollTo({ top: assistantScrollY, behavior: 'auto' });
-    scheduleHotspotLayout?.();
     if (removeAssistantHistory) history.back();
   };
   const setAssistantOpen = (open, originRect = null) => {
