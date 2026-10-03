@@ -20,6 +20,78 @@
   addEventListener('resize', onScroll, { passive: true });
   onScroll();
 
+  const mobileScrollbar = $('.mobile-scrollbar');
+  const mobileScrollbarTrack = $('.mobile-scrollbar-track');
+  const mobileScrollbarThumb = $('.mobile-scrollbar-thumb');
+  const mobileScrollbarHotspots = $('.mobile-scrollbar-hotspots');
+  const mobileSectionConfig = [
+    ['hero', 'Home'], ['about', 'About'], ['work', 'Projects'],
+    ['adaptive-exercise-recognition', 'Case Study'], ['digital-nizam', 'Digital Me'],
+    ['flutter-journey', 'Flutter'], ['ai-engineering', 'AI'], ['skills', 'Skills'],
+    ['contact', 'Contact'], ['shockwave', 'Shockwave']
+  ];
+  const mobileSections = mobileSectionConfig.map(([id, label]) => ({ id, label, element: document.getElementById(id) })).filter(item => item.element);
+  if (mobileScrollbar && mobileScrollbarTrack && mobileScrollbarThumb) {
+    let frame = 0;
+    const syncMobileScrollbar = () => {
+      if (frame) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        const documentHeight = Math.max(document.documentElement.scrollHeight, innerHeight);
+        const maxScroll = Math.max(0, documentHeight - innerHeight);
+        const trackHeight = mobileScrollbarTrack.clientHeight;
+        const thumbHeight = Math.min(trackHeight, Math.max(34, trackHeight * innerHeight / documentHeight));
+        mobileScrollbarThumb.style.height = `${thumbHeight}px`;
+        mobileScrollbarThumb.style.top = `${(maxScroll ? window.scrollY / maxScroll : 0) * Math.max(0, trackHeight - thumbHeight)}px`;
+      });
+    };
+    const layoutMobileHotspots = () => {
+      if (!mobileScrollbarHotspots) return;
+      mobileScrollbarHotspots.replaceChildren();
+      const maxScroll = Math.max(1, document.documentElement.scrollHeight - innerHeight);
+      mobileSections.forEach(({ id, label, element }) => {
+        const hotspot = document.createElement('button');
+        hotspot.type = 'button';
+        hotspot.className = 'mobile-scroll-hotspot';
+        hotspot.setAttribute('aria-label', `Go to ${label}`);
+        hotspot.title = label;
+        hotspot.style.top = `${Math.min(1, Math.max(0, (element.getBoundingClientRect().top + window.scrollY) / maxScroll)) * 100}%`;
+        hotspot.addEventListener('click', () => element.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+        mobileScrollbarHotspots.appendChild(hotspot);
+      });
+    };
+    addEventListener('scroll', syncMobileScrollbar, { passive: true });
+    addEventListener('resize', () => { syncMobileScrollbar(); layoutMobileHotspots(); }, { passive: true });
+    addEventListener('load', () => { syncMobileScrollbar(); layoutMobileHotspots(); }, { once: true });
+    requestAnimationFrame(() => { syncMobileScrollbar(); layoutMobileHotspots(); });
+    let dragging = false, grabOffset = 0;
+    mobileScrollbarThumb.addEventListener('pointerdown', event => {
+      dragging = true;
+      grabOffset = event.clientY - mobileScrollbarThumb.getBoundingClientRect().top;
+      mobileScrollbarThumb.setPointerCapture?.(event.pointerId);
+      event.preventDefault();
+    });
+    mobileScrollbarThumb.addEventListener('pointermove', event => {
+      if (!dragging) return;
+      const track = mobileScrollbarTrack.getBoundingClientRect();
+      const thumbHeight = mobileScrollbarThumb.getBoundingClientRect().height;
+      const travel = Math.max(1, track.height - thumbHeight);
+      const position = Math.min(travel, Math.max(0, event.clientY - track.top - grabOffset));
+      window.scrollTo({ top: position / travel * Math.max(0, document.documentElement.scrollHeight - innerHeight), behavior: 'auto' });
+    });
+    mobileScrollbarTrack.addEventListener('pointerdown', event => {
+      if (event.target !== mobileScrollbarTrack) return;
+      const track = mobileScrollbarTrack.getBoundingClientRect();
+      const thumbHeight = mobileScrollbarThumb.getBoundingClientRect().height;
+      const travel = Math.max(1, track.height - thumbHeight);
+      const position = Math.min(travel, Math.max(0, event.clientY - track.top - thumbHeight / 2));
+      window.scrollTo({ top: position / travel * Math.max(0, document.documentElement.scrollHeight - innerHeight), behavior: 'auto' });
+    });
+    const stopMobileDrag = () => { dragging = false; };
+    mobileScrollbarThumb.addEventListener('pointerup', stopMobileDrag);
+    mobileScrollbarThumb.addEventListener('pointercancel', stopMobileDrag);
+  }
+
   const sections = $$('main section[id]'), links = $$('.desktop-nav a');
   const observer = new IntersectionObserver(entries => entries.forEach(entry => { if (entry.isIntersecting) { links.forEach(a => a.classList.toggle('active', a.hash === `#${entry.target.id}`)); } }), { rootMargin: '-35% 0px -55% 0px' });
   sections.forEach(section => observer.observe(section));
