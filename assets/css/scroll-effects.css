@@ -172,7 +172,7 @@ html::-webkit-scrollbar {
   background: linear-gradient(180deg, #ffffff, var(--accent) 35%, var(--accent));
   box-shadow: 0 0 7px var(--accent), 0 0 18px rgba(0, 245, 255, .72);
   z-index: 4;
-  transition: top .08s linear, height .15s ease, width .15s ease, transform .15s ease;
+  transition: height .15s ease, width .15s ease, transform .15s ease;
 }
 
 .scroll-indicator-thumb:active,
@@ -203,8 +203,11 @@ html::-webkit-scrollbar {
   .scroll-indicator-thumb {
     width: 10px;
     min-height: 58px;
-    touch-action: none;
     box-shadow: 0 0 8px var(--accent), 0 0 16px rgba(0, 245, 255, .65);
+  }
+
+  .scroll-indicator {
+    pointer-events: none;
   }
 
   .scroll-indicator.is-active .scroll-indicator-thumb,
