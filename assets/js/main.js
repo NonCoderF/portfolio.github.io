@@ -20,6 +20,85 @@
   addEventListener('resize', onScroll, { passive: true });
   onScroll();
 
+  // The cyan rail mirrors native document scrolling; it never handles page gestures.
+  const scrollIndicator = $('.scroll-indicator');
+  const scrollTrack = $('.scroll-indicator-track');
+  const scrollThumb = $('.scroll-indicator-thumb');
+  const scrollHotspots = $('.scroll-hotspots');
+  const sectionLabels = { hero: 'Home', about: 'About', work: 'Projects', 'adaptive-exercise-recognition': 'Case Study', 'digital-nizam': 'Digital Me', 'flutter-journey': 'Flutter', 'ai-engineering': 'AI', skills: 'Skills', contact: 'Contact', shockwave: 'Shockwave' };
+  const portfolioSections = Object.entries(sectionLabels).map(([id, label]) => ({ id, label, element: document.getElementById(id) })).filter(item => item.element);
+  const clamp = value => Math.min(1, Math.max(0, value));
+  const syncScrollbar = () => {
+    if (!scrollIndicator || !scrollTrack || !scrollThumb) return;
+    const trackHeight = scrollTrack.clientHeight;
+    const documentHeight = Math.max(document.documentElement.scrollHeight, innerHeight);
+    const ratio = innerHeight / documentHeight;
+    const thumbHeight = Math.min(trackHeight, Math.max(64, trackHeight * ratio));
+    const maxTravel = Math.max(0, trackHeight - thumbHeight);
+    const maxScroll = Math.max(0, documentHeight - innerHeight);
+    const progress = maxScroll ? clamp(window.scrollY / maxScroll) : 0;
+    scrollThumb.style.height = `${thumbHeight}px`;
+    scrollThumb.style.top = `${progress * maxTravel}px`;
+    scrollIndicator.setAttribute('aria-valuenow', `${Math.round(progress * 100)}`);
+  };
+  const layoutHotspots = () => {
+    if (!scrollHotspots || !scrollTrack) return;
+    scrollHotspots.replaceChildren();
+    const maxScroll = Math.max(1, document.documentElement.scrollHeight - innerHeight);
+    portfolioSections.forEach(({ id, label, element }) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'scroll-hotspot';
+      button.setAttribute('aria-label', `Scroll to ${label}`);
+      button.title = label;
+      button.style.top = `${78 + clamp((element.getBoundingClientRect().top + window.scrollY) / maxScroll) * scrollTrack.clientHeight}px`;
+      button.addEventListener('click', () => element.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+      scrollHotspots.appendChild(button);
+    });
+  };
+  if (scrollIndicator) {
+    addEventListener('scroll', syncScrollbar, { passive: true });
+    addEventListener('resize', () => { syncScrollbar(); layoutHotspots(); }, { passive: true });
+    addEventListener('load', () => { syncScrollbar(); layoutHotspots(); }, { once: true });
+    requestAnimationFrame(() => { syncScrollbar(); layoutHotspots(); });
+    if ('ResizeObserver' in window) new ResizeObserver(() => { syncScrollbar(); layoutHotspots(); }).observe(document.documentElement);
+    const activeObserver = new IntersectionObserver(entries => entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      const buttons = [...scrollHotspots.querySelectorAll('.scroll-hotspot')];
+      buttons.forEach((button, index) => button.classList.toggle('is-active', portfolioSections[index].element === entry.target));
+    }), { rootMargin: '-35% 0px -55% 0px' });
+    portfolioSections.forEach(section => activeObserver.observe(section.element));
+    let dragging = false, grabOffset = 0;
+    scrollThumb?.addEventListener('pointerdown', event => {
+      dragging = true;
+      grabOffset = event.clientY - scrollThumb.getBoundingClientRect().top;
+      scrollThumb.setPointerCapture?.(event.pointerId);
+      scrollIndicator.classList.add('is-dragging');
+      event.preventDefault();
+    });
+    scrollThumb?.addEventListener('pointermove', event => {
+      if (!dragging || !scrollTrack) return;
+      const track = scrollTrack.getBoundingClientRect();
+      const thumbHeight = scrollThumb.getBoundingClientRect().height;
+      const travel = Math.max(1, track.height - thumbHeight);
+      const position = Math.min(travel, Math.max(0, event.clientY - track.top - grabOffset));
+      const maxScroll = Math.max(0, document.documentElement.scrollHeight - innerHeight);
+      window.scrollTo({ top: (position / travel) * maxScroll, behavior: 'auto' });
+    });
+    scrollTrack?.addEventListener('pointerdown', event => {
+      if (event.target !== scrollTrack) return;
+      const track = scrollTrack.getBoundingClientRect();
+      const thumbHeight = scrollThumb.getBoundingClientRect().height;
+      const travel = Math.max(1, track.height - thumbHeight);
+      const position = Math.min(travel, Math.max(0, event.clientY - track.top - thumbHeight / 2));
+      const maxScroll = Math.max(0, document.documentElement.scrollHeight - innerHeight);
+      window.scrollTo({ top: (position / travel) * maxScroll, behavior: 'auto' });
+    });
+    const stopDragging = () => { dragging = false; scrollIndicator.classList.remove('is-dragging'); };
+    scrollThumb?.addEventListener('pointerup', stopDragging);
+    scrollThumb?.addEventListener('pointercancel', stopDragging);
+  }
+
   const sections = $$('main section[id]'), links = $$('.desktop-nav a');
   const observer = new IntersectionObserver(entries => entries.forEach(entry => { if (entry.isIntersecting) { links.forEach(a => a.classList.toggle('active', a.hash === `#${entry.target.id}`)); } }), { rootMargin: '-35% 0px -55% 0px' });
   sections.forEach(section => observer.observe(section));
