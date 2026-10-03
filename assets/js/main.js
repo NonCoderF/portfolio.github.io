@@ -3,7 +3,7 @@
   const $ = (s, root = document) => root.querySelector(s);
   const $$ = (s, root = document) => [...root.querySelectorAll(s)];
   const header = $('.site-header'), backTop = $('.back-top'), progress = $('#progress-bar');
-  const scrollIndicator = $('.scroll-indicator'), scrollTrack = $('.scroll-indicator-track'), scrollThumb = $('.scroll-indicator-thumb');
+  const scrollIndicator = $('.scroll-indicator'), scrollTrack = $('.scroll-indicator-track'), scrollThumb = $('.scroll-indicator-thumb'), scrollHotspots = $('.scroll-hotspots');
   $('#year').textContent = new Date().getFullYear();
 
   const menu = $('.menu-toggle'), nav = $('.desktop-nav');
@@ -43,6 +43,74 @@
   addEventListener('resize', onScroll, { passive: true });
   onScroll();
 
+  // Semantic scrollbar map: configuration names real sections; layout supplies their positions.
+  const scrollSectionConfig = [
+    { id: 'hero', label: 'Home' },
+    { id: 'about', label: 'About' },
+    { id: 'work', label: 'Projects' },
+    { id: 'adaptive-exercise-recognition', label: 'Case Study' },
+    { id: 'digital-nizam', label: 'Digital Me' },
+    { id: 'flutter-journey', label: 'Flutter' },
+    { id: 'ai-engineering', label: 'AI' },
+    { id: 'skills', label: 'Skills' },
+    { id: 'contact', label: 'Contact' },
+    { id: 'shockwave', label: 'Shockwave' }
+  ];
+  const scrollSections = scrollSectionConfig.map(config => {
+    const element = document.getElementById(config.id);
+    if (!element) return null;
+    element.dataset.scrollSection = '';
+    return { ...config, element };
+  }).filter(Boolean);
+  const hotspotById = new Map();
+  const clamp = value => Math.min(1, Math.max(0, value));
+  const layoutHotspots = () => {
+    if (!scrollHotspots || !scrollTrack) return;
+    const trackRect = scrollTrack.getBoundingClientRect();
+    const indicatorRect = scrollIndicator.getBoundingClientRect();
+    if (!trackRect.height) return;
+    const trackOffset = trackRect.top - indicatorRect.top;
+    const scrollableHeight = Math.max(1, document.documentElement.scrollHeight - innerHeight);
+    scrollSections.forEach(section => {
+      const sectionTop = section.element.getBoundingClientRect().top + window.scrollY;
+      const progress = clamp(sectionTop / scrollableHeight);
+      const hotspot = hotspotById.get(section.id);
+      if (hotspot) hotspot.style.top = `${trackOffset + progress * trackRect.height}px`;
+    });
+  };
+  const scheduleHotspotLayout = (() => {
+    let frame = 0;
+    return () => {
+      if (frame) return;
+      frame = requestAnimationFrame(() => { frame = 0; layoutHotspots(); });
+    };
+  })();
+  if (scrollHotspots) {
+    scrollSections.forEach(section => {
+      const hotspot = document.createElement('button');
+      hotspot.type = 'button';
+      hotspot.className = 'scroll-hotspot';
+      hotspot.dataset.sectionId = section.id;
+      hotspot.setAttribute('aria-label', `Scroll to ${section.label}`);
+      hotspot.title = section.label;
+      hotspot.addEventListener('click', () => section.element.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+      scrollHotspots.appendChild(hotspot);
+      hotspotById.set(section.id, hotspot);
+    });
+    scheduleHotspotLayout();
+    addEventListener('load', scheduleHotspotLayout, { once: true });
+    document.fonts?.ready.then(scheduleHotspotLayout);
+    const sectionResizeObserver = 'ResizeObserver' in window ? new ResizeObserver(scheduleHotspotLayout) : null;
+    sectionResizeObserver?.observe(document.documentElement);
+    scrollSections.forEach(section => sectionResizeObserver?.observe(section.element));
+    const activeSectionObserver = new IntersectionObserver(entries => {
+      entries.filter(entry => entry.isIntersecting).forEach(entry => {
+        hotspotById.forEach((hotspot, id) => hotspot.classList.toggle('is-active', id === entry.target.id));
+      });
+    }, { rootMargin: '-28% 0px -58% 0px', threshold: 0 });
+    scrollSections.forEach(section => activeSectionObserver.observe(section.element));
+  }
+
   // Let the scroll thumb behave like a small native scrollbar handle.
   if (scrollIndicator && scrollThumb) {
     let dragging = false;
@@ -64,7 +132,7 @@
     const stopDragging = () => { dragging = false; scrollIndicator.classList.remove('is-dragging'); };
     scrollThumb.addEventListener('pointerup', stopDragging);
     scrollThumb.addEventListener('pointercancel', stopDragging);
-    scrollIndicator.addEventListener('pointerdown', event => { if (event.target !== scrollThumb) scrollFromPointer(event.clientY); });
+    scrollIndicator.addEventListener('pointerdown', event => { if (event.target !== scrollThumb && !event.target.closest('.scroll-hotspot')) scrollFromPointer(event.clientY); });
     scrollIndicator.addEventListener('keydown', event => {
       const amount = innerHeight * .8;
       if (event.key === 'ArrowDown' || event.key === 'PageDown') { event.preventDefault(); window.scrollBy({ top: amount, behavior: 'smooth' }); }
@@ -127,7 +195,42 @@
   let keyBuffer = ''; addEventListener('keydown', e => { if (['INPUT','TEXTAREA'].includes(document.activeElement.tagName)) return; keyBuffer = (keyBuffer + e.key.toLowerCase()).slice(-24); if (keyBuffer.endsWith('android')) { document.body.classList.add('system-pulse'); setTimeout(() => document.body.classList.remove('system-pulse'), 1400); } if (keyBuffer.endsWith('jarvis')) { const speech = window.speechSynthesis; if (speech) speech.speak(new SpeechSynthesisUtterance('Welcome Nizamuddin. System online.')); } if (keyBuffer.endsWith('sudo hire nizamuddin')) { document.querySelector('.assistant-msg').textContent = 'PERMISSION GRANTED. Welcome to the team.'; document.querySelector('.assistant-shell')?.classList.add('open'); } if (keyBuffer.endsWith('coffee')) { document.querySelector('.assistant-msg').textContent = '☕ Fuel loaded. Ship something thoughtful.'; document.querySelector('.assistant-shell')?.classList.add('open'); } });
 
   // Assistant presentation layer. Networking stays isolated in services/nizam-api.js.
-  const assistant = $('.assistant-shell'), assistantTrigger = $('.assistant-trigger'), assistantClose = $('.assistant-close'), assistantInput = $('.assistant-form input'), assistantForm = $('.assistant-form'), assistantSend = $('.assistant-form button'), assistantMessages = $('.assistant-messages');
+  const assistant = $('.assistant-shell'), assistantPanel = $('.assistant-panel'), assistantTrigger = $('.assistant-trigger'), assistantClose = $('.assistant-close'), assistantInput = $('.assistant-form input'), assistantForm = $('.assistant-form'), assistantSend = $('.assistant-form button'), assistantMessages = $('.assistant-messages');
+  const assistantScrollArea = (() => {
+    if (!assistantPanel) return null;
+    $('.assistant-prompts', assistantPanel)?.remove();
+    const existing = $('.assistant-scroll-area', assistantPanel);
+    if (existing) return existing;
+    const area = document.createElement('div');
+    area.className = 'assistant-scroll-area';
+    [$('.assistant-head', assistantPanel), $('.ai-status-strip', assistantPanel), $('.ai-knowledge', assistantPanel), assistantMessages]
+      .filter(Boolean)
+      .forEach(node => area.appendChild(node));
+    assistantPanel.insertBefore(area, assistantForm);
+    return area;
+  })();
+  let didInitialAssistantScroll = false;
+  const scrollDigitalMeToBottom = () => requestAnimationFrame(() => {
+    if (assistantScrollArea) assistantScrollArea.scrollTop = assistantScrollArea.scrollHeight;
+  });
+  const initializeAssistantScroll = (scrollToBottom = false) => {
+    if (!assistantScrollArea) return;
+    requestAnimationFrame(() => {
+      if (!assistant?.classList.contains('open')) return;
+      void assistantPanel?.offsetHeight;
+      void assistantScrollArea.offsetHeight;
+      void assistantScrollArea.scrollHeight;
+      if (scrollToBottom && !didInitialAssistantScroll) {
+        scrollDigitalMeToBottom();
+        didInitialAssistantScroll = true;
+      }
+    });
+  };
+  if (assistantScrollArea && 'ResizeObserver' in window) {
+    const assistantLayoutObserver = new ResizeObserver(() => initializeAssistantScroll());
+    assistantLayoutObserver.observe(assistantScrollArea);
+    assistantLayoutObserver.observe(assistantPanel);
+  }
   const assistantMemory = (() => {
     const dbName = 'digital-me-db', storeName = 'qa-history', fallbackKey = 'digital-me-qa-history';
     const limit = 25;
@@ -194,9 +297,67 @@
     if (index < suggestedQuestions.length) button.textContent = suggestedQuestions[index];
     else button.remove();
   }));
-  const openAssistant = () => { assistant?.classList.add('open'); assistantTrigger?.setAttribute('aria-expanded', 'true'); };
-  const scrollAssistantBottom = (behavior = 'smooth') => requestAnimationFrame(() => assistantMessages?.scrollTo({ top: assistantMessages.scrollHeight, behavior }));
-  const postAssistant = (text, className = '') => { openAssistant(); const p = document.createElement('p'); p.className = `assistant-msg ${className}`.trim(); p.textContent = text; assistantMessages?.appendChild(p); scrollAssistantBottom(); return p; };
+  let assistantScrollY = 0, previousBodyOverflow = '';
+  let assistantOriginRect = null, pendingAssistantOriginRect = null, closeTransitionHandler = null;
+  const reducedAssistantMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const finishAssistantClose = () => {
+    if (closeTransitionHandler && assistantPanel) assistantPanel.removeEventListener('transitionend', closeTransitionHandler);
+    closeTransitionHandler = null;
+    assistant?.classList.remove('open', 'is-closing', 'is-originating');
+    didInitialAssistantScroll = false;
+    document.body.classList.remove('digital-me-open');
+    document.documentElement.classList.remove('digital-me-open');
+    document.body.style.overflow = previousBodyOverflow;
+    assistant.setAttribute('aria-hidden', 'true');
+    assistantTrigger?.setAttribute('aria-expanded', 'false');
+    window.scrollTo({ top: assistantScrollY, behavior: 'auto' });
+    scheduleHotspotLayout?.();
+  };
+  const setAssistantOpen = (open, originRect = null) => {
+    if (!assistant) return;
+    if (open) {
+      if (!assistant.classList.contains('open')) {
+        assistantScrollY = window.scrollY;
+        previousBodyOverflow = document.body.style.overflow;
+      }
+      assistant.classList.add('open');
+      assistant.classList.remove('is-closing');
+      assistantOriginRect = originRect;
+      if (assistantOriginRect && assistantPanel && !reducedAssistantMotion()) {
+        requestAnimationFrame(() => {
+          const panelRect = assistantPanel.getBoundingClientRect();
+          const panelCenterX = panelRect.left + panelRect.width / 2;
+          const panelCenterY = panelRect.top + panelRect.height / 2;
+          const triggerCenterX = assistantOriginRect.left + assistantOriginRect.width / 2;
+          const triggerCenterY = assistantOriginRect.top + assistantOriginRect.height / 2;
+          assistant.style.setProperty('--assistant-origin-x', `${triggerCenterX - panelCenterX}px`);
+          assistant.style.setProperty('--assistant-origin-y', `${triggerCenterY - panelCenterY}px`);
+          assistant.style.setProperty('--assistant-origin-scale-x', `${Math.max(.08, assistantOriginRect.width / panelRect.width)}`);
+          assistant.style.setProperty('--assistant-origin-scale-y', `${Math.max(.08, assistantOriginRect.height / panelRect.height)}`);
+          assistant.classList.add('is-originating');
+          void assistantPanel.offsetWidth;
+          requestAnimationFrame(() => assistant.classList.remove('is-originating'));
+        });
+      }
+      document.body.classList.add('digital-me-open');
+      document.documentElement.classList.add('digital-me-open');
+      document.body.style.overflow = 'hidden';
+      assistant.setAttribute('aria-hidden', 'false');
+      assistantTrigger?.setAttribute('aria-expanded', 'true');
+      initializeAssistantScroll();
+    } else {
+      if (!assistant.classList.contains('open')) return;
+      if (reducedAssistantMotion() || !assistantOriginRect || !assistantPanel) return finishAssistantClose();
+      assistant.classList.remove('is-originating');
+      assistant.classList.add('is-closing');
+      closeTransitionHandler = event => {
+        if (event.target === assistantPanel && event.propertyName === 'transform') finishAssistantClose();
+      };
+      assistantPanel.addEventListener('transitionend', closeTransitionHandler);
+    }
+  };
+  const openAssistant = () => { const origin = pendingAssistantOriginRect; pendingAssistantOriginRect = null; setAssistantOpen(true, origin); };
+  const postAssistant = (text, className = '') => { openAssistant(); const p = document.createElement('p'); p.className = `assistant-msg ${className}`.trim(); p.textContent = text; assistantMessages?.appendChild(p); scrollDigitalMeToBottom(); return p; };
   const buildHistory = items => items.slice(-3).flatMap(item => [
     { role: 'user', content: String(item.question).slice(0, 1000) },
     { role: 'assistant', content: String(item.answer).slice(0, 1000) }
@@ -212,6 +373,7 @@
     panel.className = 'assistant-msg ai-memory-summary';
     panel.innerHTML = `<span class="ai-message-label">LOCAL MEMORY / ${history.length} SAVED</span><div class="ai-memory-actions"><button type="button" class="ai-memory-clear">Clear local Q&A</button></div>${history.slice(-3).map(item => `<details><summary>${escapeAI(item.question)}</summary><p>${highlightTech(item.answer)}</p></details>`).join('')}`;
     assistantMessages.appendChild(panel);
+    scrollDigitalMeToBottom();
     $('.ai-memory-clear', panel)?.addEventListener('click', async () => { await assistantMemory.clear(); panel.remove(); postAssistant('Local Digital Me Q&A history cleared for this browser.', 'reveal'); });
   };
   const escapeAI = text => String(text).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
@@ -229,13 +391,25 @@
   };
   const appendResourceCards = (resources, prompt = '', reply = '') => inferResources(resources, prompt, reply).slice(0, 2).map(resource => { const href = resource.url || resourceHrefs[resource.id]; if (!href) return ''; return `<div class="ai-project-card"><strong>${escapeAI(resource.title || resource.id)}</strong><span class="ai-project-status">${escapeAI(String(resource.type || 'resource').toUpperCase())}</span>${resource.subtitle ? `<small>${escapeAI(resource.subtitle)}</small>` : ''}<div class="ai-project-actions"><a href="${escapeAI(href)}" ${String(href).startsWith('http') ? 'target="_blank" rel="noopener noreferrer"' : ''}><i class="bi bi-arrow-up-right"></i> Open resource</a></div></div>`; }).join('');
   const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
-  const streamResponse = async (text, resources = [], prompt = '') => { openAssistant(); const panel = document.createElement('div'); panel.className = 'assistant-msg ai-response reveal'; panel.innerHTML = '<span class="ai-message-label">NIZAM / RESPONSE</span><div class="ai-stream-text"></div>'; assistantMessages?.appendChild(panel); scrollAssistantBottom('auto'); const stream = $('.ai-stream-text', panel); for (const character of String(text)) { stream.textContent += character; scrollAssistantBottom('auto'); await delay(character === '\n' ? 40 : /[.!?,:;]/.test(character) ? 25 : 5); } stream.innerHTML = formatAIResponse(text); const cards = appendResourceCards(resources, prompt, text); if (cards) panel.insertAdjacentHTML('beforeend', cards); scrollAssistantBottom(); return panel; };
+  const streamResponse = async (text, resources = [], prompt = '') => { openAssistant(); const panel = document.createElement('div'); panel.className = 'assistant-msg ai-response reveal'; panel.innerHTML = '<span class="ai-message-label">NIZAM / RESPONSE</span><div class="ai-stream-text"></div>'; assistantMessages?.appendChild(panel); scrollDigitalMeToBottom(); const stream = $('.ai-stream-text', panel); for (const character of String(text)) { stream.textContent += character; scrollDigitalMeToBottom(); await delay(character === '\n' ? 40 : /[.!?,:;]/.test(character) ? 25 : 5); } stream.innerHTML = formatAIResponse(text); const cards = appendResourceCards(resources, prompt, text); if (cards) panel.insertAdjacentHTML('beforeend', cards); scrollDigitalMeToBottom(); return panel; };
   const thinkingPhases = ['Thinking', 'Thinking deeply', 'Acquiring ideas', 'Connecting relevant experience', 'Preparing the answer'];
   const think = async (node, request) => { let index = 0; node.textContent = thinkingPhases[index]; const timer = setInterval(() => { index = (index + 1) % thinkingPhases.length; node.textContent = thinkingPhases[index]; }, 5000); try { return await request; } finally { clearInterval(timer); } };
   const askAssistant = async question => { const prompt = String(question || '').trim(); if (!prompt || !window.NizamApi || assistantForm?.dataset.busy === 'true') return; assistantForm.dataset.busy = 'true'; if (assistantInput) assistantInput.disabled = true; if (assistantSend) assistantSend.disabled = true; postAssistant(prompt, 'user-message'); const thinking = postAssistant('Thinking...', 'assistant-typing reveal'); const started = performance.now(); try { const history = await getAssistantHistory(); const request = window.NizamApi.askNizam(prompt, history); const result = await think(thinking, request); const reply = typeof result === 'string' ? result : result.reply; const resources = typeof result === 'string' ? [] : result.resources; thinking.remove(); await streamResponse(reply, resources, prompt); await assistantMemory.save(prompt, reply); $('.ai-memory-summary', assistantMessages)?.remove(); renderMemoryHistory(); const latency = Math.max(1, Math.round(performance.now() - started)); if ($('#ai-latency')) $('#ai-latency').textContent = `${latency}ms`; if ($('#ai-last-response')) $('#ai-last-response').textContent = 'Now'; } catch (error) { thinking.remove(); if (error.name !== 'AbortError') postAssistant(assistantError, 'reveal'); } finally { assistantForm.dataset.busy = 'false'; if (assistantInput) assistantInput.disabled = false; if (assistantSend) assistantSend.disabled = false; assistantInput?.focus(); } };
-  const closeAssistant = () => { assistant?.classList.remove('open'); assistantTrigger?.setAttribute('aria-expanded', 'false'); assistantTrigger?.focus(); };
-  assistantTrigger?.addEventListener('click', () => { const open = assistant.classList.toggle('open'); assistantTrigger.setAttribute('aria-expanded', String(open)); if (open) { renderMemoryHistory(); assistantInput?.focus(); } }); assistantClose?.addEventListener('click', closeAssistant); addEventListener('keydown', event => { if (event.key === 'Escape' && assistant?.classList.contains('open')) closeAssistant(); }); $$('.assistant-prompts button,.prompt-list button').forEach(button => button.addEventListener('click', () => askAssistant(button.textContent))); $('.assistant-inline-open')?.addEventListener('click', event => { event.preventDefault(); openAssistant(); renderMemoryHistory(); assistantInput?.focus(); }); assistantForm?.addEventListener('submit', event => { event.preventDefault(); const prompt = assistantInput?.value.trim(); if (!prompt) return; assistantInput.value = ''; askAssistant(prompt); });
+  const closeAssistant = () => { setAssistantOpen(false); assistantTrigger?.focus(); };
+  assistantTrigger?.addEventListener('click', event => { pendingAssistantOriginRect = event.currentTarget.getBoundingClientRect(); }, true);
+  $('.assistant-inline-open')?.addEventListener('click', event => { pendingAssistantOriginRect = event.currentTarget.getBoundingClientRect(); }, true);
+  $$('.prompt-list button').forEach(button => button.addEventListener('click', event => { pendingAssistantOriginRect = event.currentTarget.getBoundingClientRect(); }, true));
+  assistantTrigger?.addEventListener('click', () => { const open = !assistant.classList.contains('open'); if (open) { openAssistant(); renderMemoryHistory(); assistantInput?.focus(); } else closeAssistant(); }); assistantClose?.addEventListener('click', closeAssistant); addEventListener('keydown', event => { if (event.key === 'Escape' && assistant?.classList.contains('open')) closeAssistant(); }); $$('.assistant-prompts button,.prompt-list button').forEach(button => button.addEventListener('click', () => askAssistant(button.textContent))); $('.assistant-inline-open')?.addEventListener('click', event => { event.preventDefault(); openAssistant(); renderMemoryHistory(); assistantInput?.focus(); }); assistantForm?.addEventListener('submit', event => { event.preventDefault(); const prompt = assistantInput?.value.trim(); if (!prompt) return; assistantInput.value = ''; askAssistant(prompt); });
+  assistantTrigger?.addEventListener('click', () => {
+    if (assistant?.classList.contains('open')) renderMemoryHistory().then(() => initializeAssistantScroll(true));
+  });
+  $('.assistant-inline-open')?.addEventListener('click', () => {
+    requestAnimationFrame(() => renderMemoryHistory().then(() => initializeAssistantScroll(true)));
+  });
   renderMemoryHistory();
+  assistantMessages?.addEventListener('toggle', event => {
+    if (event.target.matches('details')) scrollDigitalMeToBottom();
+  }, true);
 
 
   // Device lab.
