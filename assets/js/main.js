@@ -299,10 +299,20 @@
   }));
   let assistantScrollY = 0, previousBodyOverflow = '';
   let assistantOriginRect = null, pendingAssistantOriginRect = null, closeTransitionHandler = null;
+  let assistantHistoryActive = false, assistantKeyboardOpen = false;
   const reducedAssistantMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const restoreAssistantHistory = () => history.pushState({ ...(history.state || {}), digitalMe: true }, '', window.location.href);
+  const keyboardIsOpen = () => assistantKeyboardOpen && (window.visualViewport ? visualViewport.height < innerHeight - 80 : matchMedia('(pointer: coarse)').matches);
+  assistantInput?.addEventListener('focus', () => { assistantKeyboardOpen = true; });
+  assistantInput?.addEventListener('blur', () => { assistantKeyboardOpen = false; });
+  visualViewport?.addEventListener('resize', () => {
+    if (visualViewport.height >= innerHeight - 80) assistantKeyboardOpen = false;
+  }, { passive: true });
   const finishAssistantClose = () => {
     if (closeTransitionHandler && assistantPanel) assistantPanel.removeEventListener('transitionend', closeTransitionHandler);
     closeTransitionHandler = null;
+    const removeAssistantHistory = assistantHistoryActive;
+    assistantHistoryActive = false;
     assistant?.classList.remove('open', 'is-closing', 'is-originating');
     didInitialAssistantScroll = false;
     document.body.classList.remove('digital-me-open');
@@ -310,8 +320,10 @@
     document.body.style.overflow = previousBodyOverflow;
     assistant.setAttribute('aria-hidden', 'true');
     assistantTrigger?.setAttribute('aria-expanded', 'false');
+    assistantTrigger?.focus();
     window.scrollTo({ top: assistantScrollY, behavior: 'auto' });
     scheduleHotspotLayout?.();
+    if (removeAssistantHistory) history.back();
   };
   const setAssistantOpen = (open, originRect = null) => {
     if (!assistant) return;
@@ -319,6 +331,8 @@
       if (!assistant.classList.contains('open')) {
         assistantScrollY = window.scrollY;
         previousBodyOverflow = document.body.style.overflow;
+        assistantHistoryActive = true;
+        history.pushState({ ...(history.state || {}), digitalMe: true }, '', window.location.href);
       }
       assistant.classList.add('open');
       assistant.classList.remove('is-closing');
@@ -394,12 +408,26 @@
   const streamResponse = async (text, resources = [], prompt = '') => { openAssistant(); const panel = document.createElement('div'); panel.className = 'assistant-msg ai-response reveal'; panel.innerHTML = '<span class="ai-message-label">NIZAM / RESPONSE</span><div class="ai-stream-text"></div>'; assistantMessages?.appendChild(panel); scrollDigitalMeToBottom(); const stream = $('.ai-stream-text', panel); for (const character of String(text)) { stream.textContent += character; scrollDigitalMeToBottom(); await delay(character === '\n' ? 40 : /[.!?,:;]/.test(character) ? 25 : 5); } stream.innerHTML = formatAIResponse(text); const cards = appendResourceCards(resources, prompt, text); if (cards) panel.insertAdjacentHTML('beforeend', cards); scrollDigitalMeToBottom(); return panel; };
   const thinkingPhases = ['Thinking', 'Thinking deeply', 'Acquiring ideas', 'Connecting relevant experience', 'Preparing the answer'];
   const think = async (node, request) => { let index = 0; node.textContent = thinkingPhases[index]; const timer = setInterval(() => { index = (index + 1) % thinkingPhases.length; node.textContent = thinkingPhases[index]; }, 5000); try { return await request; } finally { clearInterval(timer); } };
-  const askAssistant = async question => { const prompt = String(question || '').trim(); if (!prompt || !window.NizamApi || assistantForm?.dataset.busy === 'true') return; assistantForm.dataset.busy = 'true'; if (assistantInput) assistantInput.disabled = true; if (assistantSend) assistantSend.disabled = true; postAssistant(prompt, 'user-message'); const thinking = postAssistant('Thinking...', 'assistant-typing reveal'); const started = performance.now(); try { const history = await getAssistantHistory(); const request = window.NizamApi.askNizam(prompt, history); const result = await think(thinking, request); const reply = typeof result === 'string' ? result : result.reply; const resources = typeof result === 'string' ? [] : result.resources; thinking.remove(); await streamResponse(reply, resources, prompt); await assistantMemory.save(prompt, reply); $('.ai-memory-summary', assistantMessages)?.remove(); renderMemoryHistory(); const latency = Math.max(1, Math.round(performance.now() - started)); if ($('#ai-latency')) $('#ai-latency').textContent = `${latency}ms`; if ($('#ai-last-response')) $('#ai-last-response').textContent = 'Now'; } catch (error) { thinking.remove(); if (error.name !== 'AbortError') postAssistant(assistantError, 'reveal'); } finally { assistantForm.dataset.busy = 'false'; if (assistantInput) assistantInput.disabled = false; if (assistantSend) assistantSend.disabled = false; assistantInput?.focus(); } };
-  const closeAssistant = () => { setAssistantOpen(false); assistantTrigger?.focus(); };
+  const askAssistant = async question => { const prompt = String(question || '').trim(); if (!prompt || !window.NizamApi || assistantForm?.dataset.busy === 'true') return; assistantForm.dataset.busy = 'true'; if (assistantInput) assistantInput.readOnly = true; postAssistant(prompt, 'user-message'); const thinking = postAssistant('Thinking...', 'assistant-typing reveal'); const started = performance.now(); try { const history = await getAssistantHistory(); const request = window.NizamApi.askNizam(prompt, history); const result = await think(thinking, request); const reply = typeof result === 'string' ? result : result.reply; const resources = typeof result === 'string' ? [] : result.resources; thinking.remove(); await streamResponse(reply, resources, prompt); await assistantMemory.save(prompt, reply); $('.ai-memory-summary', assistantMessages)?.remove(); renderMemoryHistory(); const latency = Math.max(1, Math.round(performance.now() - started)); if ($('#ai-latency')) $('#ai-latency').textContent = `${latency}ms`; if ($('#ai-last-response')) $('#ai-last-response').textContent = 'Now'; } catch (error) { thinking.remove(); if (error.name !== 'AbortError') postAssistant(assistantError, 'reveal'); } finally { assistantForm.dataset.busy = 'false'; if (assistantInput) assistantInput.readOnly = false; } };
+  const closeAssistant = () => setAssistantOpen(false);
+  addEventListener('popstate', () => {
+    if (!assistant?.classList.contains('open')) return;
+    if (keyboardIsOpen()) {
+      restoreAssistantHistory();
+      return;
+    }
+    assistantHistoryActive = false;
+    setAssistantOpen(false);
+  });
   assistantTrigger?.addEventListener('click', event => { pendingAssistantOriginRect = event.currentTarget.getBoundingClientRect(); }, true);
   $('.assistant-inline-open')?.addEventListener('click', event => { pendingAssistantOriginRect = event.currentTarget.getBoundingClientRect(); }, true);
   $$('.prompt-list button').forEach(button => button.addEventListener('click', event => { pendingAssistantOriginRect = event.currentTarget.getBoundingClientRect(); }, true));
-  assistantTrigger?.addEventListener('click', () => { const open = !assistant.classList.contains('open'); if (open) { openAssistant(); renderMemoryHistory(); assistantInput?.focus(); } else closeAssistant(); }); assistantClose?.addEventListener('click', closeAssistant); addEventListener('keydown', event => { if (event.key === 'Escape' && assistant?.classList.contains('open')) closeAssistant(); }); $$('.assistant-prompts button,.prompt-list button').forEach(button => button.addEventListener('click', () => askAssistant(button.textContent))); $('.assistant-inline-open')?.addEventListener('click', event => { event.preventDefault(); openAssistant(); renderMemoryHistory(); assistantInput?.focus(); }); assistantForm?.addEventListener('submit', event => { event.preventDefault(); const prompt = assistantInput?.value.trim(); if (!prompt) return; assistantInput.value = ''; askAssistant(prompt); });
+  assistantTrigger?.addEventListener('click', () => { const open = !assistant.classList.contains('open'); if (open) { openAssistant(); renderMemoryHistory(); } else closeAssistant(); });
+  assistantClose?.addEventListener('click', closeAssistant);
+  addEventListener('keydown', event => { if (event.key === 'Escape' && assistant?.classList.contains('open')) closeAssistant(); });
+  $$('.assistant-prompts button,.prompt-list button').forEach(button => button.addEventListener('click', () => askAssistant(button.textContent)));
+  $('.assistant-inline-open')?.addEventListener('click', event => { event.preventDefault(); openAssistant(); renderMemoryHistory(); });
+  assistantForm?.addEventListener('submit', event => { event.preventDefault(); const prompt = assistantInput?.value.trim(); if (!prompt) return; assistantInput.value = ''; askAssistant(prompt); });
   assistantTrigger?.addEventListener('click', () => {
     if (assistant?.classList.contains('open')) renderMemoryHistory().then(() => initializeAssistantScroll(true));
   });
