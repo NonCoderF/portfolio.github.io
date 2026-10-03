@@ -3,14 +3,93 @@
   const $ = (s, root = document) => root.querySelector(s);
   const $$ = (s, root = document) => [...root.querySelectorAll(s)];
   const header = $('.site-header'), backTop = $('.back-top'), progress = $('#progress-bar');
+  const scrollIndicator = $('.scroll-indicator'), scrollTrack = $('.scroll-indicator-track'), scrollThumb = $('.scroll-indicator-thumb');
   $('#year').textContent = new Date().getFullYear();
 
   const menu = $('.menu-toggle'), nav = $('.desktop-nav');
   menu?.addEventListener('click', () => { const open = nav.classList.toggle('open'); menu.setAttribute('aria-expanded', open); menu.innerHTML = `<i class="bi bi-${open ? 'x' : 'list'}"></i>`; });
   $$('.desktop-nav a').forEach(link => link.addEventListener('click', () => { nav.classList.remove('open'); menu?.setAttribute('aria-expanded', 'false'); menu.innerHTML = '<i class="bi bi-list"></i>'; }));
 
-  function onScroll() { const y = window.scrollY; header?.classList.toggle('scrolled', y > 20); backTop?.classList.toggle('visible', y > 600); const max = document.documentElement.scrollHeight - innerHeight; if (progress) progress.style.width = `${max ? y / max * 100 : 0}%`; }
-  addEventListener('scroll', onScroll, { passive: true }); onScroll();
+  let lastScrollY = window.scrollY, scrollIdleTimer, scrollFrame = 0;
+  function onScroll() {
+    const y = window.scrollY;
+    if (scrollIndicator && y !== lastScrollY) {
+      scrollIndicator.classList.add('is-active');
+      clearTimeout(scrollIdleTimer);
+      scrollIdleTimer = setTimeout(() => scrollIndicator.classList.remove('is-active'), 450);
+      lastScrollY = y;
+    }
+    header?.classList.toggle('scrolled', y > 20);
+    backTop?.classList.toggle('visible', y > 600);
+    const max = Math.max(0, document.documentElement.scrollHeight - innerHeight);
+    const ratio = max > 0 ? Math.min(1, Math.max(0, y / max)) : 0;
+    if (progress) progress.style.width = `${ratio * 100}%`;
+    if (scrollFrame) return;
+    scrollFrame = requestAnimationFrame(() => {
+      scrollFrame = 0;
+      if (!scrollTrack || !scrollThumb || !scrollIndicator) return;
+      const trackHeight = scrollTrack.clientHeight;
+      const viewportRatio = innerHeight / Math.max(document.documentElement.scrollHeight, innerHeight);
+      const minThumbHeight = parseFloat(getComputedStyle(scrollThumb).minHeight) || 42;
+      const thumbHeight = Math.min(trackHeight, Math.max(minThumbHeight, trackHeight * viewportRatio));
+      const trackTravel = Math.max(0, trackHeight - thumbHeight);
+      const trackOffset = scrollTrack.getBoundingClientRect().top - scrollIndicator.getBoundingClientRect().top;
+      scrollThumb.style.height = `${thumbHeight}px`;
+      scrollThumb.style.top = `${trackOffset + ratio * trackTravel}px`;
+      scrollIndicator.setAttribute('aria-valuenow', `${Math.round(ratio * 100)}`);
+    });
+  }
+  addEventListener('scroll', onScroll, { passive: true });
+  addEventListener('resize', onScroll, { passive: true });
+  onScroll();
+
+  // Let the scroll thumb behave like a small native scrollbar handle.
+  if (scrollIndicator && scrollThumb) {
+    let dragging = false;
+    const scrollFromPointer = clientY => {
+      const rail = scrollTrack.getBoundingClientRect();
+      const thumb = scrollThumb.getBoundingClientRect();
+      const travel = Math.max(1, rail.height - thumb.height);
+      const position = Math.min(travel, Math.max(0, clientY - rail.top - thumb.height / 2));
+      const max = document.documentElement.scrollHeight - innerHeight;
+      window.scrollTo({ top: (position / travel) * max, behavior: 'auto' });
+    };
+    scrollThumb.addEventListener('pointerdown', event => {
+      dragging = true;
+      scrollIndicator.classList.add('is-dragging');
+      scrollThumb.setPointerCapture?.(event.pointerId);
+      event.preventDefault();
+    });
+    scrollThumb.addEventListener('pointermove', event => { if (dragging) scrollFromPointer(event.clientY); });
+    const stopDragging = () => { dragging = false; scrollIndicator.classList.remove('is-dragging'); };
+    scrollThumb.addEventListener('pointerup', stopDragging);
+    scrollThumb.addEventListener('pointercancel', stopDragging);
+    scrollIndicator.addEventListener('pointerdown', event => { if (event.target !== scrollThumb) scrollFromPointer(event.clientY); });
+    scrollIndicator.addEventListener('keydown', event => {
+      const amount = innerHeight * .8;
+      if (event.key === 'ArrowDown' || event.key === 'PageDown') { event.preventDefault(); window.scrollBy({ top: amount, behavior: 'smooth' }); }
+      if (event.key === 'ArrowUp' || event.key === 'PageUp') { event.preventDefault(); window.scrollBy({ top: -amount, behavior: 'smooth' }); }
+      if (event.key === 'Home') { event.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+      if (event.key === 'End') { event.preventDefault(); window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' }); }
+    });
+  }
+
+  // Short, rate-limited haptic ticks make manual mobile scrolling feel tangible.
+  const touchDevice = matchMedia('(pointer:coarse)').matches;
+  if (touchDevice && 'vibrate' in navigator) {
+    let touchScrolling = false, lastHapticY = window.scrollY, lastHapticAt = 0;
+    addEventListener('touchstart', () => { touchScrolling = true; lastHapticY = window.scrollY; }, { passive: true });
+    addEventListener('touchend', () => { touchScrolling = false; }, { passive: true });
+    addEventListener('scroll', () => {
+      if (!touchScrolling) return;
+      const now = performance.now(), distance = Math.abs(window.scrollY - lastHapticY);
+      if (distance >= 90 && now - lastHapticAt > 140) {
+        navigator.vibrate(8);
+        lastHapticY = window.scrollY;
+        lastHapticAt = now;
+      }
+    }, { passive: true });
+  }
 
   const sections = $$('main section[id]'), links = $$('.desktop-nav a');
   const observer = new IntersectionObserver(entries => entries.forEach(entry => { if (entry.isIntersecting) { links.forEach(a => a.classList.toggle('active', a.hash === `#${entry.target.id}`)); } }), { rootMargin: '-35% 0px -55% 0px' });

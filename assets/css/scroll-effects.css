@@ -1,0 +1,147 @@
+:root {
+  --scrollbar-gutter-width: 38px;
+}
+
+@media (max-width: 1199px) {
+  :root { --scrollbar-gutter-width: 32px; }
+}
+
+@media (max-width: 767px) {
+  :root { --scrollbar-gutter-width: 28px; }
+}
+
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.page-content {
+  width: calc(100% - var(--scrollbar-gutter-width));
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.site-header {
+  right: var(--scrollbar-gutter-width);
+}
+
+.assistant-shell {
+  right: calc(var(--scrollbar-gutter-width) + 26px) !important;
+}
+
+.back-top {
+  right: calc(var(--scrollbar-gutter-width) + 25px);
+}
+
+#progress-bar {
+  right: var(--scrollbar-gutter-width);
+  max-width: calc(100% - var(--scrollbar-gutter-width));
+}
+
+html {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+html::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.scroll-indicator {
+  position: fixed;
+  inset: 0 0 0 auto;
+  width: var(--scrollbar-gutter-width);
+  z-index: 120;
+  pointer-events: auto;
+  opacity: .78;
+  transition: opacity .25s ease;
+  box-sizing: border-box;
+  background: rgba(4, 10, 22, .78);
+  border-left: 1px solid rgba(0, 220, 255, .12);
+}
+
+.scroll-indicator:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 5px;
+}
+
+.scroll-indicator-track,
+.scroll-indicator-thumb {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.scroll-indicator-track {
+  top: clamp(76px, 9vh, 100px);
+  right: 0;
+  bottom: clamp(96px, 9vh, 112px);
+  width: 3px;
+  background: rgba(148, 163, 184, .3);
+}
+
+.scroll-indicator-thumb {
+  top: 0;
+  width: 9px;
+  height: 42px;
+  min-height: 56px;
+  padding: 0;
+  border: 0;
+  cursor: grab;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #ffffff, var(--accent) 35%, var(--accent));
+  box-shadow: 0 0 7px var(--accent), 0 0 18px rgba(0, 245, 255, .72);
+  transition: top .08s linear, height .15s ease, width .15s ease, transform .15s ease;
+}
+
+.scroll-indicator-thumb:active,
+.scroll-indicator.is-dragging .scroll-indicator-thumb,
+.scroll-indicator.is-active .scroll-indicator-thumb {
+  width: 12px;
+  transform: translateX(-50%) scaleX(1.15);
+  cursor: grabbing;
+  box-shadow: 0 0 10px 2px var(--accent), 0 0 24px rgba(0, 245, 255, .9);
+}
+
+@media (max-width: 767px) {
+  .scroll-indicator {
+    width: var(--scrollbar-gutter-width);
+    opacity: .95;
+  }
+
+  .scroll-indicator-track {
+    top: 78px;
+    bottom: 88px;
+  }
+
+  .scroll-indicator-track {
+    width: 2px;
+    background: rgba(148, 163, 184, .38);
+  }
+
+  .scroll-indicator-thumb {
+    width: 10px;
+    min-height: 58px;
+    touch-action: none;
+    box-shadow: 0 0 8px var(--accent), 0 0 16px rgba(0, 245, 255, .65);
+  }
+
+  .scroll-indicator.is-active .scroll-indicator-thumb,
+  .scroll-indicator.is-dragging .scroll-indicator-thumb {
+    width: 13px;
+  }
+
+  .assistant-panel {
+    left: 10px !important;
+    right: calc(var(--scrollbar-gutter-width) + 10px) !important;
+    width: auto !important;
+    max-width: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scroll-indicator-thumb { transition: none; }
+}
