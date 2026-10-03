@@ -6,100 +6,31 @@ body {
 
 html {
   overflow-y: auto;
-  scrollbar-width: none;
+  scrollbar-width: auto;
+  scrollbar-color: #00e5ef #05080c;
   -ms-overflow-style: auto;
 }
 ::-webkit-scrollbar {
-  display: none;
+  width: 14px;
+  height: 14px;
+}
+
+::-webkit-scrollbar-track {
+  background: #05080c;
 }
 
 ::-webkit-scrollbar-thumb {
+  background: #00e5ef;
+  border: 3px solid #05080c;
   border-radius: 999px;
 }
 
-.scroll-indicator {
-  position: fixed;
-  inset: 0 0 0 auto;
-  width: 34px;
-  z-index: 120;
-  pointer-events: none;
-  background: rgba(4, 10, 22, .78);
-  border-left: 1px solid rgba(0, 220, 255, .12);
+::-webkit-scrollbar-thumb:hover {
+  background: #45f3ff;
 }
 
-.scroll-indicator-track,
-.scroll-indicator-thumb {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-}
-
-.scroll-indicator-track {
-  top: 78px;
-  bottom: 88px;
-  width: 3px;
-  background: rgba(148, 163, 184, .3);
-  pointer-events: auto;
-}
-
-.scroll-indicator-thumb {
-  top: 0;
-  width: 12px;
-  min-height: 64px;
-  border: 0;
-  border-radius: 999px;
-  background: linear-gradient(180deg, #fff, var(--accent) 35%, var(--accent));
-  box-shadow: 0 0 8px var(--accent), 0 0 18px rgba(0, 245, 255, .72);
-  cursor: grab;
-  pointer-events: auto;
-  touch-action: none;
-}
-
-.scroll-indicator-thumb:active,
-.scroll-indicator.is-dragging .scroll-indicator-thumb {
-  cursor: grabbing;
-}
-
-.scroll-hotspots { position: absolute; inset: 0; pointer-events: none; }
-
-.scroll-hotspot {
-  position: absolute;
-  left: 50%;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  transform: translate(-50%, -50%);
-  pointer-events: auto;
-  cursor: pointer;
-}
-
-.scroll-hotspot::before {
-  content: "";
-  position: absolute;
-  inset: 50% auto auto 50%;
-  width: 5px;
-  height: 5px;
-  border: 1px solid rgba(0, 245, 255, .75);
-  border-radius: 50%;
-  background: rgba(4, 10, 22, .9);
-  transform: translate(-50%, -50%);
-}
-
-.scroll-hotspot.is-active::before,
-.scroll-hotspot:hover::before,
-.scroll-hotspot:focus-visible::before {
-  width: 8px;
-  height: 8px;
-  background: var(--accent);
-  box-shadow: 0 0 8px var(--accent), 0 0 16px rgba(0, 245, 255, .7);
-}
-
-@media (pointer: coarse) {
-  .scroll-indicator { pointer-events: none; }
-  .scroll-indicator-track { pointer-events: auto; }
-  .scroll-indicator-thumb { pointer-events: auto; }
+::-webkit-scrollbar-thumb:active {
+  background: #8af9ff;
 }
 
 @media (max-width: 767px) {
