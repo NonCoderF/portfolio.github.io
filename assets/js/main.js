@@ -297,7 +297,7 @@
     if (index < suggestedQuestions.length) button.textContent = suggestedQuestions[index];
     else button.remove();
   }));
-  let assistantScrollY = 0, previousBodyOverflow = '';
+  let assistantScrollY = 0;
   let assistantOriginRect = null, pendingAssistantOriginRect = null, closeTransitionHandler = null;
   let assistantHistoryActive = false, assistantKeyboardOpen = false;
   const reducedAssistantMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -315,9 +315,6 @@
     assistantHistoryActive = false;
     assistant?.classList.remove('open', 'is-closing', 'is-originating');
     didInitialAssistantScroll = false;
-    document.body.classList.remove('digital-me-open');
-    document.documentElement.classList.remove('digital-me-open');
-    document.body.style.overflow = previousBodyOverflow;
     assistant.setAttribute('aria-hidden', 'true');
     assistantTrigger?.setAttribute('aria-expanded', 'false');
     assistantTrigger?.focus();
@@ -330,7 +327,6 @@
     if (open) {
       if (!assistant.classList.contains('open')) {
         assistantScrollY = window.scrollY;
-        previousBodyOverflow = document.body.style.overflow;
         assistantHistoryActive = true;
         history.pushState({ ...(history.state || {}), digitalMe: true }, '', window.location.href);
       }
@@ -353,9 +349,6 @@
           requestAnimationFrame(() => assistant.classList.remove('is-originating'));
         });
       }
-      document.body.classList.add('digital-me-open');
-      document.documentElement.classList.add('digital-me-open');
-      document.body.style.overflow = 'hidden';
       assistant.setAttribute('aria-hidden', 'false');
       assistantTrigger?.setAttribute('aria-expanded', 'true');
       initializeAssistantScroll();

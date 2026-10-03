@@ -13,7 +13,11 @@
 html,
 body {
   max-width: 100%;
-  overflow-x: hidden;
+  overflow-x: clip;
+}
+
+html {
+  overflow-y: auto;
 }
 
 .page-content {
@@ -277,24 +281,6 @@ html::-webkit-scrollbar {
 
 @media (prefers-reduced-motion: reduce) {
   .scroll-indicator-thumb { transition: none; }
-}
-
-/* Digital Me owns the viewport while open. */
-html.digital-me-open,
-body.digital-me-open {
-  overflow: hidden !important;
-  height: 100%;
-  overscroll-behavior: none;
-}
-
-html,
-body {
-  overscroll-behavior-y: none;
-}
-
-.digital-me-open .scroll-indicator,
-.digital-me-open .back-top {
-  display: none !important;
 }
 
 .assistant-shell.open {
