@@ -162,9 +162,9 @@ html::-webkit-scrollbar {
 
 .scroll-indicator-thumb {
   top: 0;
-  width: 9px;
+  width: 12px;
   height: 42px;
-  min-height: 56px;
+  min-height: 64px;
   padding: 0;
   border: 0;
   cursor: grab;
@@ -172,14 +172,14 @@ html::-webkit-scrollbar {
   background: linear-gradient(180deg, #ffffff, var(--accent) 35%, var(--accent));
   box-shadow: 0 0 7px var(--accent), 0 0 18px rgba(0, 245, 255, .72);
   z-index: 4;
-  transition: height .15s ease, width .15s ease, transform .15s ease;
+  transition: none;
 }
 
 .scroll-indicator-thumb:active,
 .scroll-indicator.is-dragging .scroll-indicator-thumb,
 .scroll-indicator.is-active .scroll-indicator-thumb {
   width: 12px;
-  transform: translateX(-50%) scaleX(1.15);
+  transform: translateX(-50%);
   cursor: grabbing;
   box-shadow: 0 0 10px 2px var(--accent), 0 0 24px rgba(0, 245, 255, .9);
 }
@@ -201,18 +201,15 @@ html::-webkit-scrollbar {
   }
 
   .scroll-indicator-thumb {
-    width: 10px;
-    min-height: 58px;
+    width: 14px;
+    min-height: 68px;
+    touch-action: none;
     box-shadow: 0 0 8px var(--accent), 0 0 16px rgba(0, 245, 255, .65);
-  }
-
-  .scroll-indicator {
-    pointer-events: none;
   }
 
   .scroll-indicator.is-active .scroll-indicator-thumb,
   .scroll-indicator.is-dragging .scroll-indicator-thumb {
-    width: 13px;
+    width: 14px;
   }
 
   .assistant-panel {
