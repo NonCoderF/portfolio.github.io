@@ -160,20 +160,48 @@
   }));
   let assistantScrollY = 0;
   let assistantOriginRect = null, pendingAssistantOriginRect = null, closeTransitionHandler = null;
-  let assistantHistoryActive = false, assistantKeyboardOpen = false;
+  let assistantHistoryActive = false, assistantKeyboardOpen = false, assistantKeyboardDismissed = false, assistantDismissRequested = false, assistantFocusTimer = null;
   const reducedAssistantMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const mobileAssistant = () => matchMedia('(pointer: coarse)').matches || innerWidth <= 767;
   const restoreAssistantHistory = () => history.pushState({ ...(history.state || {}), digitalMe: true }, '', window.location.href);
   const keyboardIsOpen = () => assistantKeyboardOpen && (window.visualViewport ? visualViewport.height < innerHeight - 80 : matchMedia('(pointer: coarse)').matches);
-  assistantInput?.addEventListener('focus', () => { assistantKeyboardOpen = true; });
-  assistantInput?.addEventListener('blur', () => { assistantKeyboardOpen = false; });
+  assistantInput?.addEventListener('focus', () => { assistantKeyboardOpen = true; assistantKeyboardDismissed = false; });
+  assistantInput?.addEventListener('blur', () => {
+    if (assistantDismissRequested || !assistant?.classList.contains('open') || !mobileAssistant()) {
+      assistantKeyboardOpen = false;
+      return;
+    }
+    // Mobile browsers blur the field when the viewport changes or another part
+    // of the panel is tapped. Keep Digital Me in typing mode until it is closed.
+    assistantKeyboardOpen = true;
+    clearTimeout(assistantFocusTimer);
+    assistantFocusTimer = setTimeout(() => {
+      if (!assistantDismissRequested && assistant?.classList.contains('open') && assistantInput && !assistantInput.disabled) {
+        assistantInput.focus({ preventScroll: true });
+      }
+    }, 80);
+  });
   visualViewport?.addEventListener('resize', () => {
-    if (visualViewport.height >= innerHeight - 80) assistantKeyboardOpen = false;
+    if (visualViewport.height < innerHeight - 80) {
+      assistantKeyboardOpen = true;
+      assistantKeyboardDismissed = false;
+    } else if (assistant?.classList.contains('open')) {
+      // The user used the OS keyboard-dismiss gesture. Do not immediately
+      // focus the field again, but keep Digital Me open.
+      assistantKeyboardOpen = false;
+      assistantKeyboardDismissed = true;
+      clearTimeout(assistantFocusTimer);
+    }
   }, { passive: true });
   const finishAssistantClose = () => {
     if (closeTransitionHandler && assistantPanel) assistantPanel.removeEventListener('transitionend', closeTransitionHandler);
     closeTransitionHandler = null;
     const removeAssistantHistory = assistantHistoryActive;
     assistantHistoryActive = false;
+    assistantDismissRequested = false;
+    assistantKeyboardOpen = false;
+    assistantKeyboardDismissed = false;
+    clearTimeout(assistantFocusTimer);
     assistant?.classList.remove('open', 'is-closing', 'is-originating');
     didInitialAssistantScroll = false;
     assistant.setAttribute('aria-hidden', 'true');
@@ -185,6 +213,8 @@
   const setAssistantOpen = (open, originRect = null) => {
     if (!assistant) return;
     if (open) {
+      assistantDismissRequested = false;
+      assistantKeyboardDismissed = false;
       if (!assistant.classList.contains('open')) {
         assistantScrollY = window.scrollY;
         assistantHistoryActive = true;
@@ -212,6 +242,11 @@
       assistant.setAttribute('aria-hidden', 'false');
       assistantTrigger?.setAttribute('aria-expanded', 'true');
       initializeAssistantScroll();
+      if (mobileAssistant()) {
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          if (assistant.classList.contains('open') && !assistantDismissRequested) assistantInput?.focus({ preventScroll: true });
+        }));
+      }
     } else {
       if (!assistant.classList.contains('open')) return;
       if (reducedAssistantMotion() || !assistantOriginRect || !assistantPanel) return finishAssistantClose();
@@ -262,10 +297,10 @@
   const thinkingPhases = ['Thinking', 'Thinking deeply', 'Acquiring ideas', 'Connecting relevant experience', 'Preparing the answer'];
   const think = async (node, request) => { let index = 0; node.textContent = thinkingPhases[index]; const timer = setInterval(() => { index = (index + 1) % thinkingPhases.length; node.textContent = thinkingPhases[index]; }, 5000); try { return await request; } finally { clearInterval(timer); } };
   const askAssistant = async question => { const prompt = String(question || '').trim(); if (!prompt || !window.NizamApi || assistantForm?.dataset.busy === 'true') return; assistantForm.dataset.busy = 'true'; if (assistantInput) assistantInput.readOnly = true; postAssistant(prompt, 'user-message'); const thinking = postAssistant('Thinking...', 'assistant-typing reveal'); const started = performance.now(); try { const history = await getAssistantHistory(); const request = window.NizamApi.askNizam(prompt, history); const result = await think(thinking, request); const reply = typeof result === 'string' ? result : result.reply; const resources = typeof result === 'string' ? [] : result.resources; thinking.remove(); await streamResponse(reply, resources, prompt); await assistantMemory.save(prompt, reply); $('.ai-memory-summary', assistantMessages)?.remove(); renderMemoryHistory(); const latency = Math.max(1, Math.round(performance.now() - started)); if ($('#ai-latency')) $('#ai-latency').textContent = `${latency}ms`; if ($('#ai-last-response')) $('#ai-last-response').textContent = 'Now'; } catch (error) { thinking.remove(); if (error.name !== 'AbortError') postAssistant(assistantError, 'reveal'); } finally { assistantForm.dataset.busy = 'false'; if (assistantInput) assistantInput.readOnly = false; } };
-  const closeAssistant = () => setAssistantOpen(false);
+  const closeAssistant = () => { assistantDismissRequested = true; setAssistantOpen(false); };
   addEventListener('popstate', () => {
     if (!assistant?.classList.contains('open')) return;
-    if (keyboardIsOpen()) {
+    if (keyboardIsOpen() || assistantKeyboardDismissed) {
       restoreAssistantHistory();
       return;
     }
@@ -276,6 +311,7 @@
   $('.assistant-inline-open')?.addEventListener('click', event => { pendingAssistantOriginRect = event.currentTarget.getBoundingClientRect(); }, true);
   $$('.prompt-list button').forEach(button => button.addEventListener('click', event => { pendingAssistantOriginRect = event.currentTarget.getBoundingClientRect(); }, true));
   assistantTrigger?.addEventListener('click', () => { const open = !assistant.classList.contains('open'); if (open) { openAssistant(); renderMemoryHistory(); } else closeAssistant(); });
+  assistantClose?.addEventListener('pointerdown', () => { assistantDismissRequested = true; }, { passive: true });
   assistantClose?.addEventListener('click', closeAssistant);
   addEventListener('keydown', event => { if (event.key === 'Escape' && assistant?.classList.contains('open')) closeAssistant(); });
   $$('.assistant-prompts button,.prompt-list button').forEach(button => button.addEventListener('click', () => askAssistant(button.textContent)));
@@ -284,6 +320,9 @@
   assistantSend?.addEventListener('pointerdown', event => {
     if (document.activeElement === assistantInput) event.preventDefault();
   });
+  assistantTrigger?.addEventListener('pointerdown', () => {
+    if (assistant?.classList.contains('open')) assistantDismissRequested = true;
+  }, { passive: true });
   assistantTrigger?.addEventListener('click', () => {
     if (assistant?.classList.contains('open')) renderMemoryHistory().then(() => initializeAssistantScroll(true));
   });
