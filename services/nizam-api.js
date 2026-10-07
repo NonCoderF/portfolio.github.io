@@ -3,8 +3,6 @@
 
   const ENDPOINT = 'https://jmyqvrvrguhfujgombqe.supabase.co/functions/v1/nizam';
   let activeController = null;
-
-  const isShockwavePrompt = prompt => /\bshock\s*wave\b|\bshockwave\b/i.test(prompt);
   const isExercisePrompt = prompt => /\b(exercise recognition|squat|squats|push[- ]?ups?|jumping jacks?|tflite|tensorflow lite|pose|landmarks|cheat|anti[- ]?cheat|personalized model|iterative algorithm|session recording|recorded sessions|android sensors|kiss principle|liveness)\b/i.test(prompt);
 
   const fallbackExerciseReply = () => `Adaptive Exercise Recognition is my Vantage Fit computer-vision case study.
@@ -35,60 +33,6 @@ The system did not only learn what a squat looks like. Over time, it learned wha
 
 Engineering lesson:
 Build -> Observe -> Users Break It -> Understand Why -> Improve -> Repeat. When one sensor can be fooled, validate it with an independent signal. The strongest part of the project was not just integrating TensorFlow Lite; it was evolving the system through real failures, anti-cheat design, device context, validation gates, and production ownership.`;
-
-  const fallbackShockwaveReply = async () => {
-    const fallback = {
-      title: 'Project Shockwave',
-      subtitle: 'Hybrid Immersive Audio Engineering Platform',
-      mission: 'Engineer an affordable cinematic audio platform using off-the-shelf hardware.',
-      objective: 'Deliver premium room-filling audio using intelligent engineering instead of expensive branded ecosystems.',
-      process: ['Research', 'Room Measurement', 'Acoustic Planning', 'Component Selection', 'Power Calculations', 'Signal Routing', 'Installation', 'Calibration', 'Testing', 'Optimization'],
-      modules: [
-        { name: 'Television', role: 'Media Source' },
-        { name: 'Audio Splitter', role: 'Signal Routing' },
-        { name: 'Amplifier', role: 'Power Stage' },
-        { name: 'Passive Speakers', role: 'Room Coverage' },
-        { name: 'Subwoofer', role: 'Low Frequency' }
-      ],
-      roadmap: ['Wireless Synchronization', 'Smartphone Control', 'Automatic Room Calibration', 'AI Powered Equalization', 'Multi-room Audio']
-    };
-
-    let shockwave = fallback;
-    try {
-      const response = await fetch('data/shockwave.json', { headers: { Accept: 'application/json' } });
-      if (response.ok) shockwave = { ...fallback, ...await response.json() };
-    } catch (error) {
-      shockwave = fallback;
-    }
-
-    const modules = (shockwave.modules || fallback.modules)
-      .slice(0, 5)
-      .map(item => `- ${item.name}: ${item.role || item.status || 'System module'}`)
-      .join('\n');
-    const process = (shockwave.process || fallback.process).slice(0, 6).join(', ');
-    const roadmap = (shockwave.roadmap || fallback.roadmap).slice(0, 5).join(', ');
-
-    return `${shockwave.title} is my ${shockwave.subtitle}.
-
-Mission:
-${shockwave.mission}
-
-Why I built it:
-${shockwave.problem || 'Commercial home theater systems are often too expensive because they sell closed ecosystems. Shockwave explores how thoughtful engineering can make immersive audio more accessible.'}
-
-Engineering:
-${shockwave.objective || fallback.objective}
-
-Core modules:
-${modules}
-
-Process:
-${process}
-
-Future:
-${roadmap}`;
-  };
-
   window.NizamApi = {
     async askNizam(prompt, history = []) {
       const normalizedPrompt = String(prompt || '').trim();
@@ -147,7 +91,6 @@ ${roadmap}`;
         if (error.name === 'AbortError') throw error;
         console.error('[Nizam frontend] request failed', error);
         if (isExercisePrompt(normalizedPrompt)) return { reply: fallbackExerciseReply(), resources: [] };
-        if (isShockwavePrompt(normalizedPrompt)) return { reply: await fallbackShockwaveReply(), resources: [] };
         throw error;
       } finally {
         if (activeController === controller) activeController = null;

@@ -52,11 +52,11 @@
       "Razorpay",
       "Clean Architecture"
     ],
-    "href": "https://github.com/NonCoderF/tapori-ai/tree/master-flutter",
+    "href": "https://github.com/NonCoderF/tapori-ai",
     "links": [
       {
         "label": "View Flutter Source",
-        "href": "https://github.com/NonCoderF/tapori-ai/tree/master-flutter",
+        "href": "https://github.com/NonCoderF/tapori-ai",
         "primary": true
       },
       {
@@ -86,6 +86,34 @@
       "MCP-ready tooling"
     ],
     "href": "https://github.com/NonCoderF/ArchGuard"
+  },
+  {
+    "id": "findmyrecipe",
+    "name": "FindMyRecipe",
+    "type": "Android app / AI recipe discovery",
+    "status": "LIVE ON GOOGLE PLAY",
+    "version": "Production",
+    "description": "Snap your ingredients, let AI identify them, and discover recipes you can cook.",
+    "technologies": [
+      "Kotlin",
+      "Jetpack Compose",
+      "Supabase",
+      "AI"
+    ],
+    "href": "https://play.google.com/store/apps/details?id=com.sparkstudios.findmyrecipe&hl=en",
+    "image": "assets/img/projects/findmyrecipe/findmyrecipe-hero.png",
+    "imageAlt": "FindMyRecipe Android app interface showing ingredient capture and AI recipe results",
+    "links": [
+      {
+        "label": "View on Google Play",
+        "href": "https://play.google.com/store/apps/details?id=com.sparkstudios.findmyrecipe&hl=en",
+        "primary": true
+      },
+      {
+        "label": "View Source",
+        "href": "https://github.com/NonCoderF/CookWare"
+      }
+    ]
   },
   {
     "id": "sonicbridge",

@@ -12,7 +12,7 @@
 
 ## 2. Sections being retained
 
-- Hero, About, Digital Me, stats band, selected work, project index, experience, skills, writing, FAQ, contact, education, device lab, architecture flow, Shockwave, SonicBridge, Nexus, footer.
+- Hero, About, Digital Me, stats band, selected work, project index, experience, skills, writing, FAQ, contact, education, device lab, architecture flow, SonicBridge, Nexus, footer.
 - Existing command palette, theme toggle, boot sequence, particles, AOS reveals, service worker, resume asset, GitHub/Medium/email links.
 - Digital Me backend contract through `services/nizam-api.js`.
 
