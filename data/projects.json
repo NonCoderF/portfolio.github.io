@@ -112,8 +112,50 @@
       {
         "label": "View Source",
         "href": "https://github.com/NonCoderF/CookWare"
+      },
+      {
+        "label": "The story continues with FormFit",
+        "href": "#from-recipes-to-repetitions"
       }
     ]
+  },
+  {
+    "id": "formfit",
+    "name": "FormFit",
+    "type": "Android / Computer Vision / Fitness Technology",
+    "status": "PUBLISHED ON GOOGLE PLAY",
+    "version": "Production app + evolving vision",
+    "description": "AI-powered fitness and human-movement tracking for push-ups, squats, jumping jacks, treadmill running, and exploratory Record & Repeat movement practice.",
+    "role": "Designed and built the Android experience around camera-based movement analysis, exercise feedback, and a broader vision for practicing movements beyond fixed exercise lists.",
+    "challenge": "Make workout tracking useful without hiding the essential experience behind subscriptions, while keeping real-time camera analysis understandable and responsive.",
+    "technologies": [
+      "Kotlin",
+      "Jetpack Compose",
+      "CameraX",
+      "ML Kit Pose Detection",
+      "TensorFlow Lite",
+      "MVVM",
+      "Clean Architecture"
+    ],
+    "href": "#formfit",
+    "image": "assets/img/projects/formfit/7aa5acd0-f8fd-4bd6-9a65-a14de14766d2.png",
+    "imageAlt": "FormFit promotional artwork showing pose landmarks across squats, push-ups, jumping jacks, treadmill running, and Record and Repeat",
+    "links": [
+      {
+        "label": "Read case study",
+        "href": "#formfit",
+        "primary": true
+      },
+      {
+        "label": "View on Google Play",
+        "href": "https://play.google.com/store/apps/details?id=com.sparkstudios.formfit"
+      },
+      {
+        "label": "View Source",
+        "href": "https://github.com/NonCoderF/fitness"
+      }
+    ],
+    "note": "Record & Repeat is presented as an evolving product direction; the case study distinguishes the shipped exercise flows from the broader vision."
   },
   {
     "id": "sonicbridge",
