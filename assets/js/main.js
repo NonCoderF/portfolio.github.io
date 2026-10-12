@@ -45,7 +45,7 @@
   ['exercise','sonicbridge','software','research','hire'].forEach(command => $('.command-list')?.insertAdjacentHTML('beforeend', `<button data-command="${command}"><i class="bi bi-arrow-up-right"></i> ${command}</button>`)); $$('.command-list button').forEach(button => button.addEventListener('click', () => { const command = button.dataset.command, destination = commands[command]; closePalette(); if (!destination || command === 'clear') return window.scrollTo({ top: 0, behavior: 'smooth' }); if (destination.startsWith('http') || destination.endsWith('.pdf')) window.open(destination, '_blank', 'noopener'); else document.querySelector(destination)?.scrollIntoView({ behavior: 'smooth' }); }));
   input?.addEventListener('input', () => { const term = input.value.toLowerCase(); $$('.command-list button').forEach(button => button.hidden = !button.dataset.command.includes(term)); });
 
-  // Lightweight cursor and magnetic/tilt interactions on pointer devices.
+  // Lightweight glowing cursor and magnetic/tilt interactions on pointer devices.
   const dot = $('.cursor-dot'), ring = $('.cursor-ring'), finePointer = matchMedia('(pointer:fine)').matches;
   if (finePointer && dot && ring) { let rx = 0, ry = 0, mx = 0, my = 0; addEventListener('pointermove', e => { mx = e.clientX; my = e.clientY; dot.style.left = `${mx}px`; dot.style.top = `${my}px`; dot.style.opacity = 1; ring.style.opacity = 1; }); const follow = () => { rx += (mx - rx) * .16; ry += (my - ry) * .16; ring.style.left = `${rx}px`; ring.style.top = `${ry}px`; requestAnimationFrame(follow); }; follow(); $$('a,button,.project-card,.skill-card').forEach(el => { el.addEventListener('mouseenter', () => ring.classList.add('is-hover')); el.addEventListener('mouseleave', () => ring.classList.remove('is-hover')); }); $$('.project-card').forEach(card => card.addEventListener('pointermove', e => { const r = card.getBoundingClientRect(); card.style.transform = `perspective(900px) rotateX(${(e.clientY-r.top-r.height/2)/-35}deg) rotateY(${(e.clientX-r.left-r.width/2)/35}deg) translateY(-5px)`; })); $$('.project-card').forEach(card => card.addEventListener('pointerleave', () => card.style.transform = '')); }
 
@@ -159,7 +159,7 @@
     else button.remove();
   }));
   let assistantScrollY = 0;
-  let assistantOriginRect = null, pendingAssistantOriginRect = null, closeTransitionHandler = null;
+  let assistantOriginRect = null, pendingAssistantOriginRect = null, closeTransitionHandler = null, closeFallbackTimer = null;
   let assistantHistoryActive = false, assistantKeyboardOpen = false, assistantKeyboardDismissed = false, assistantDismissRequested = false, assistantFocusTimer = null;
   const reducedAssistantMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
   const mobileAssistant = () => matchMedia('(pointer: coarse)').matches || innerWidth <= 767;
@@ -194,6 +194,8 @@
     }
   }, { passive: true });
   const finishAssistantClose = () => {
+    clearTimeout(closeFallbackTimer);
+    closeFallbackTimer = null;
     if (closeTransitionHandler && assistantPanel) assistantPanel.removeEventListener('transitionend', closeTransitionHandler);
     closeTransitionHandler = null;
     const removeAssistantHistory = assistantHistoryActive;
@@ -203,6 +205,11 @@
     assistantKeyboardDismissed = false;
     clearTimeout(assistantFocusTimer);
     assistant?.classList.remove('open', 'is-closing', 'is-originating');
+    assistant?.style.removeProperty('--assistant-origin-x');
+    assistant?.style.removeProperty('--assistant-origin-y');
+    assistant?.style.removeProperty('--assistant-origin-scale-x');
+    assistant?.style.removeProperty('--assistant-origin-scale-y');
+    assistantOriginRect = null;
     didInitialAssistantScroll = false;
     assistant.setAttribute('aria-hidden', 'true');
     assistantTrigger?.setAttribute('aria-expanded', 'false');
@@ -213,6 +220,8 @@
   const setAssistantOpen = (open, originRect = null) => {
     if (!assistant) return;
     if (open) {
+      clearTimeout(closeFallbackTimer);
+      closeFallbackTimer = null;
       assistantDismissRequested = false;
       assistantKeyboardDismissed = false;
       if (!assistant.classList.contains('open')) {
@@ -252,10 +261,15 @@
       if (reducedAssistantMotion() || !assistantOriginRect || !assistantPanel) return finishAssistantClose();
       assistant.classList.remove('is-originating');
       assistant.classList.add('is-closing');
+      clearTimeout(closeFallbackTimer);
       closeTransitionHandler = event => {
         if (event.target === assistantPanel && event.propertyName === 'transform') finishAssistantClose();
       };
       assistantPanel.addEventListener('transitionend', closeTransitionHandler);
+      // Some mobile browsers skip transitionend when the viewport/keyboard
+      // changes during the close animation. Never leave the full-screen shell
+      // mounted as an invisible touch interceptor.
+      closeFallbackTimer = setTimeout(finishAssistantClose, reducedAssistantMotion() ? 0 : 520);
     }
   };
   const openAssistant = () => { const origin = pendingAssistantOriginRect; pendingAssistantOriginRect = null; setAssistantOpen(true, origin); };

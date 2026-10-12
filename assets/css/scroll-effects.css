@@ -172,6 +172,27 @@ html {
   -webkit-overflow-scrolling: touch;
 }
 
+/* Closed/closing states must never leave the full-screen assistant shell as a
+   touch interceptor. The JavaScript close fallback also removes the state if
+   a mobile browser skips transitionend. */
+.assistant-shell:not(.open) {
+  width: auto !important;
+  height: auto !important;
+  overflow: visible;
+  pointer-events: auto;
+}
+
+.assistant-shell:not(.open) .assistant-panel {
+  pointer-events: none !important;
+  visibility: hidden !important;
+}
+
+.assistant-shell.is-closing,
+.assistant-shell.is-closing::before,
+.assistant-shell.is-closing .assistant-panel {
+  pointer-events: none !important;
+}
+
 .assistant-shell.open.is-originating .assistant-panel,
 .assistant-shell.open.is-closing .assistant-panel {
   transform: translate(calc(-50% + var(--assistant-origin-x, 0px)), var(--assistant-origin-y, 0px)) scale(var(--assistant-origin-scale-x, 1), var(--assistant-origin-scale-y, 1));
