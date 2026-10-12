@@ -5,16 +5,31 @@
   const header = $('.site-header'), backTop = $('.back-top');
   $('#year').textContent = new Date().getFullYear();
 
+  // Build the hero perimeter as an SVG stroke so the highlight follows the actual rounded panel.
+  const heroPanel = $('.portrait-composition');
+  if (heroPanel && !$('.hero-perimeter', heroPanel)) {
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(svgNS, 'svg');
+    svg.classList.add('hero-perimeter'); svg.setAttribute('viewBox', '0 0 1000 700'); svg.setAttribute('preserveAspectRatio', 'none'); svg.setAttribute('aria-hidden', 'true');
+    const defs = document.createElementNS(svgNS, 'defs');
+    const gradient = document.createElementNS(svgNS, 'linearGradient'); gradient.id = 'heroPerimeterGradient'; gradient.setAttribute('x1', '0'); gradient.setAttribute('y1', '0'); gradient.setAttribute('x2', '1'); gradient.setAttribute('y2', '1');
+    [['0','#00F0FF'],['.32','#238BFF'],['.7','#9D4DFF'],['1','#F065FF']].forEach(([offset, color]) => { const stop = document.createElementNS(svgNS, 'stop'); stop.setAttribute('offset', offset); stop.setAttribute('stop-color', color); gradient.appendChild(stop); });
+    defs.appendChild(gradient); svg.appendChild(defs);
+    [['hero-perimeter-base','1.5',''],['hero-perimeter-glow','3','.22 .78'],['hero-perimeter-travel','2.2','.065 .935']].forEach(([className, width, dash]) => { const rect = document.createElementNS(svgNS, 'rect'); rect.classList.add(className); rect.setAttribute('x', '2'); rect.setAttribute('y', '2'); rect.setAttribute('width', '996'); rect.setAttribute('height', '696'); rect.setAttribute('rx', '32'); rect.setAttribute('pathLength', '1'); rect.setAttribute('stroke-width', width); if (dash) rect.setAttribute('stroke-dasharray', dash); svg.appendChild(rect); });
+    heroPanel.prepend(svg);
+  }
+
   const menu = $('.menu-toggle'), nav = $('.desktop-nav');
   menu?.addEventListener('click', () => { const open = nav.classList.toggle('open'); menu.setAttribute('aria-expanded', open); menu.innerHTML = `<i class="bi bi-${open ? 'x' : 'list'}"></i>`; });
   $$('.desktop-nav a').forEach(link => link.addEventListener('click', () => { nav.classList.remove('open'); menu?.setAttribute('aria-expanded', 'false'); menu.innerHTML = '<i class="bi bi-list"></i>'; }));
 
-  let lastScrollY = window.scrollY;
+  let lastScrollY = window.scrollY, scrollFrame = 0;
   function onScroll() {
     const y = window.scrollY;
     lastScrollY = y;
     header?.classList.toggle('scrolled', y > 20);
     backTop?.classList.toggle('visible', y > 600);
+    if (!scrollFrame) scrollFrame = requestAnimationFrame(() => { document.documentElement.style.setProperty('--scroll-progress', `${Math.min(1, y / Math.max(1, document.documentElement.scrollHeight - innerHeight))}`); document.documentElement.style.setProperty('--scroll-light-x', `${50 + Math.sin(y / 700) * 8}%`); scrollFrame = 0; });
   }
   addEventListener('scroll', onScroll, { passive: true });
   addEventListener('resize', onScroll, { passive: true });
@@ -28,7 +43,7 @@
   const counterObserver = new IntersectionObserver(entries => entries.forEach(entry => { if (!entry.isIntersecting) return; const el = entry.target, end = Number(el.dataset.counter), start = performance.now(); const tick = now => { const progress = Math.min((now - start) / 1100, 1); el.textContent = Math.floor(progress * end) + '+'; if (progress < 1) requestAnimationFrame(tick); }; requestAnimationFrame(tick); counterObserver.unobserve(el); }), { threshold: .6 });
   counters.forEach(el => counterObserver.observe(el));
 
-  if (window.AOS && !matchMedia('(prefers-reduced-motion: reduce)').matches) AOS.init({ duration: 750, easing: 'ease-out-cubic', once: true, offset: 80 });
+  if (window.AOS && !matchMedia('(prefers-reduced-motion: reduce)').matches) { AOS.init({ duration: 750, easing: 'ease-out-cubic', once: true, offset: 80 }); document.documentElement.classList.add('aos-enabled'); }
 
   // Boot sequence: keep it short, skippable, and never block navigation.
   const boot = $('#boot-screen');
@@ -47,7 +62,7 @@
 
   // Lightweight glowing cursor and magnetic/tilt interactions on pointer devices.
   const dot = $('.cursor-dot'), ring = $('.cursor-ring'), finePointer = matchMedia('(pointer:fine)').matches;
-  if (finePointer && dot && ring) { let rx = 0, ry = 0, mx = 0, my = 0; addEventListener('pointermove', e => { mx = e.clientX; my = e.clientY; dot.style.left = `${mx}px`; dot.style.top = `${my}px`; dot.style.opacity = 1; ring.style.opacity = 1; }); const follow = () => { rx += (mx - rx) * .16; ry += (my - ry) * .16; ring.style.left = `${rx}px`; ring.style.top = `${ry}px`; requestAnimationFrame(follow); }; follow(); $$('a,button,.project-card,.skill-card').forEach(el => { el.addEventListener('mouseenter', () => ring.classList.add('is-hover')); el.addEventListener('mouseleave', () => ring.classList.remove('is-hover')); }); $$('.project-card').forEach(card => card.addEventListener('pointermove', e => { const r = card.getBoundingClientRect(); card.style.transform = `perspective(900px) rotateX(${(e.clientY-r.top-r.height/2)/-35}deg) rotateY(${(e.clientX-r.left-r.width/2)/35}deg) translateY(-5px)`; })); $$('.project-card').forEach(card => card.addEventListener('pointerleave', () => card.style.transform = '')); }
+  if (finePointer && dot && ring) { let rx = 0, ry = 0, mx = 0, my = 0, cursorFrame = 0; addEventListener('pointermove', e => { mx = e.clientX; my = e.clientY; dot.style.left = `${mx}px`; dot.style.top = `${my}px`; dot.style.opacity = 1; ring.style.opacity = 1; if (!cursorFrame) cursorFrame = requestAnimationFrame(() => { rx += (mx - rx) * .16; ry += (my - ry) * .16; ring.style.left = `${rx}px`; ring.style.top = `${ry}px`; cursorFrame = 0; }); }); $$('a,button,.project-card,.skill-card').forEach(el => { el.addEventListener('mouseenter', () => ring.classList.add('is-hover')); el.addEventListener('mouseleave', () => ring.classList.remove('is-hover')); }); $$('.project-card').forEach(card => card.addEventListener('pointermove', e => { const r = card.getBoundingClientRect(); card.style.setProperty('--pointer-x', `${((e.clientX - r.left) / r.width) * 100}%`); card.style.setProperty('--pointer-y', `${((e.clientY - r.top) / r.height) * 100}%`); })); $$('.project-card').forEach(card => card.addEventListener('pointerleave', () => { card.style.removeProperty('--pointer-x'); card.style.removeProperty('--pointer-y'); })); }
 
   // A tiny Web Audio click tone, opt-in and muted by default.
   let soundOn = false, audio; const soundButton = $('.sound-toggle'); soundButton?.addEventListener('click', () => { soundOn = !soundOn; soundButton.innerHTML = `<i class="bi bi-volume-${soundOn ? 'up' : 'mute'}"></i>`; if (soundOn) audio = new (window.AudioContext || window.webkitAudioContext)(); }); const ping = () => { if (!soundOn || !audio) return; const osc = audio.createOscillator(), gain = audio.createGain(); osc.frequency.value = 660; gain.gain.setValueAtTime(.025, audio.currentTime); gain.gain.exponentialRampToValueAtTime(.001, audio.currentTime + .06); osc.connect(gain).connect(audio.destination); osc.start(); osc.stop(audio.currentTime + .06); }; $$('button,a').forEach(el => el.addEventListener('click', ping));
