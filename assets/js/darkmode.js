@@ -1,1 +1,6 @@
-(() => { const root = document.documentElement, button = document.querySelector('.theme-toggle'); const saved = localStorage.getItem('portfolio-theme'); if (saved) root.dataset.theme = saved; const icon = () => { if (button) button.innerHTML = `<i class="bi bi-${root.dataset.theme === 'light' ? 'moon' : 'sun'}"></i>`; }; icon(); button?.addEventListener('click', () => { root.dataset.theme = root.dataset.theme === 'light' ? 'dark' : 'light'; localStorage.setItem('portfolio-theme', root.dataset.theme); icon(); }); })();
+(() => {
+  // The portfolio intentionally ships with one cinematic dark visual system.
+  const root = document.documentElement;
+  root.dataset.theme = 'dark';
+  try { localStorage.removeItem('portfolio-theme'); } catch (error) {}
+})();

@@ -6,7 +6,7 @@
   "display": "standalone",
   "background_color": "#08090c",
   "theme_color": "#08090c",
-  "description": "Senior Mobile Engineer portfolio for Android, Flutter, Clean Architecture, AI/LLM integration, and production mobile systems.",
+  "description": "Senior Mobile Engineer portfolio for Android, React Native, Expo, TypeScript, Clean Architecture, AI-powered applications, and production mobile systems.",
   "icons": [
     {
       "src": "assets/img/favicon.png",

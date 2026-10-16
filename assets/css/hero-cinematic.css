@@ -190,3 +190,72 @@ html:not(.aos-enabled) [data-aos] { opacity: 1 !important; transform: none !impo
   .project-card:hover { transform: translateY(-2px); }
   .project-card::before { display: none; }
 }
+
+/* Portfolio 3.0 depth layer: only the light field responds; portrait pixels stay still. */
+.hero-editorial-visual::before { position: absolute; z-index: 1; inset: -18%; content: ""; pointer-events: none; opacity: .42; background: radial-gradient(circle at var(--hero-pointer-x,50%) var(--hero-pointer-y,50%),rgba(0,240,255,.16),transparent 18%),radial-gradient(ellipse at 78% 28%,rgba(157,77,255,.12),transparent 38%); filter: blur(18px); transform: translate3d(calc((var(--hero-pointer-x,50%) - 50%) / 18),calc((var(--hero-pointer-y,50%) - 50%) / 18),0); transition: transform .8s cubic-bezier(.22,1,.36,1),opacity .6s ease; }
+.portrait-composition::before { background: radial-gradient(circle at var(--hero-pointer-x,50%) var(--hero-pointer-y,50%),rgba(191,250,255,.18),transparent 19%),linear-gradient(116deg,transparent 13%,rgba(191,250,255,.14) 30%,transparent 41%),linear-gradient(72deg,transparent 49%,rgba(240,101,255,.1) 69%,transparent 86%),radial-gradient(ellipse at 16% 48%,rgba(0,240,255,.19),transparent 34%),radial-gradient(ellipse at 53% 38%,rgba(35,139,255,.13),transparent 31%),radial-gradient(ellipse at 88% 50%,rgba(157,77,255,.2),transparent 36%); background-size: auto,auto,auto,auto,auto,auto; transition: background-position .7s cubic-bezier(.22,1,.36,1),opacity .8s ease; }
+.hero-editorial-visual::after { position: absolute; z-index: 3; inset: 8% 12%; content: ""; pointer-events: none; opacity: .3; background: linear-gradient(112deg,transparent 28%,rgba(255,255,255,.2) 44%,transparent 52%); transform: translateX(calc((var(--hero-pointer-x,50%) - 50%) / 4)); transition: transform .7s cubic-bezier(.22,1,.36,1); mix-blend-mode: screen; }
+.hero-editorial-visual.is-pointer-active::before,.hero-editorial-visual.is-pointer-active::after { opacity: .72; }
+
+/* Expandable project explorer. */
+.project-explorer-dialog { width: min(920px,calc(100vw - 32px)); max-height: min(820px,calc(100dvh - 32px)); padding: 0; color: var(--text); border: 1px solid rgba(0,240,255,.42); border-radius: 24px; background: linear-gradient(145deg,rgba(7,18,34,.98),rgba(16,15,42,.98)); box-shadow: 0 28px 100px rgba(0,0,0,.6),0 0 50px rgba(0,240,255,.12); overflow: hidden; }
+.project-explorer-dialog::backdrop { background: rgba(2,5,15,.78); backdrop-filter: blur(10px); }
+.project-explorer-dialog[open] { animation: explorerIn .36s cubic-bezier(.22,1,.36,1); }
+.project-explorer-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; padding: 24px 26px 18px; border-bottom: 1px solid rgba(0,240,255,.14); }
+.project-explorer-kicker { color: var(--accent); font: 10px var(--mono); letter-spacing: .14em; text-transform: uppercase; }
+.project-explorer-head h2 { margin: 8px 0 0; font-size: clamp(24px,4vw,42px); line-height: .98; }
+.project-explorer-close { width: 38px; height: 38px; border: 1px solid rgba(0,240,255,.28); border-radius: 50%; background: rgba(0,240,255,.06); color: var(--text); font-size: 22px; cursor: pointer; }
+.project-explorer-close:hover { border-color: var(--accent); color: var(--accent); }
+.project-explorer-body { display: grid; grid-template-columns: minmax(0,1.3fr) minmax(230px,.7fr); gap: 24px; padding: 24px 26px 28px; overflow: auto; }
+.project-explorer-summary { color: var(--muted); line-height: 1.7; }
+.project-explorer-summary p { margin: 0 0 14px; }
+.project-explorer-label { display: block; margin: 20px 0 9px; color: var(--accent); font: 10px var(--mono); letter-spacing: .12em; text-transform: uppercase; }
+.project-explorer-stack { display: flex; flex-wrap: wrap; gap: 7px; }
+.project-explorer-stack span { padding: 7px 9px; border: 1px solid rgba(0,240,255,.18); border-radius: 999px; color: #d8fbff; background: rgba(0,240,255,.06); font: 10px var(--mono); }
+.project-explorer-side { display: flex; flex-direction: column; gap: 14px; }
+.project-explorer-media { min-height: 150px; border: 1px solid rgba(0,240,255,.2); border-radius: 16px; background: radial-gradient(circle at 20% 20%,rgba(0,240,255,.18),transparent 38%),rgba(6,13,28,.8); overflow: hidden; }
+.project-explorer-media img { width: 100%; height: 100%; min-height: 150px; object-fit: cover; }
+.project-explorer-architecture { padding: 14px; border: 1px solid rgba(157,77,255,.22); border-radius: 16px; color: #d9d5ff; font: 11px/1.7 var(--mono); background: rgba(157,77,255,.06); }
+.project-explorer-links { display: flex; flex-wrap: wrap; gap: 9px; }
+.project-explorer-links a { display: inline-flex; align-items: center; gap: 7px; }
+.project-inspect-button { display: inline-flex; align-items: center; gap: 8px; margin-top: 14px; padding: 9px 12px; border: 1px solid rgba(0,240,255,.26); border-radius: 999px; color: #dffeff; background: rgba(0,240,255,.06); font: 10px var(--mono); cursor: pointer; }
+.project-inspect-button:hover,.project-inspect-button:focus-visible { border-color: var(--accent); background: rgba(0,240,255,.13); outline: none; }
+
+/* Technology constellation. */
+.technology-constellation-section { overflow: hidden; }
+.constellation-shell { display: grid; grid-template-columns: minmax(0,1.2fr) minmax(250px,.8fr); gap: 24px; padding: 24px; border: 1px solid rgba(0,240,255,.18); border-radius: 24px; background: linear-gradient(135deg,rgba(5,18,34,.72),rgba(20,13,48,.62)); }
+.constellation-stage { position: relative; min-height: 430px; border: 1px solid rgba(0,240,255,.12); border-radius: 18px; background: radial-gradient(circle at 50% 50%,rgba(0,240,255,.08),transparent 34%),rgba(3,9,22,.55); overflow: hidden; }
+.constellation-svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.constellation-edge { stroke: rgba(83,190,221,.2); stroke-width: 1; transition: stroke .3s ease,stroke-width .3s ease,opacity .3s ease; }
+.constellation-edge.is-connected { stroke: rgba(0,240,255,.9); stroke-width: 2; filter: drop-shadow(0 0 4px rgba(0,240,255,.7)); }
+.constellation-node { position: absolute; z-index: 1; min-width: 92px; padding: 8px 10px; border: 1px solid rgba(0,240,255,.22); border-radius: 999px; color: #ccecf1; background: rgba(4,14,30,.9); font: 10px var(--mono); cursor: pointer; transform: translate(-50%,-50%); transition: border-color .25s ease,background .25s ease,color .25s ease,box-shadow .25s ease,opacity .25s ease; }
+.constellation-node[data-kind="project"] { border-color: rgba(157,77,255,.34); color: #e5d9ff; }
+.constellation-node:hover,.constellation-node:focus-visible,.constellation-node.is-selected { border-color: var(--accent); color: #fff; background: rgba(0,240,255,.14); box-shadow: 0 0 22px rgba(0,240,255,.2); outline: none; }
+.constellation-node.is-muted { opacity: .28; }
+.constellation-legend { display: grid; align-content: start; gap: 13px; }
+.constellation-legend h3 { margin: 0; font-size: 20px; }
+.constellation-legend p { color: var(--muted); line-height: 1.65; }
+.constellation-selection { min-height: 120px; padding: 16px; border: 1px solid rgba(157,77,255,.25); border-radius: 16px; background: rgba(157,77,255,.06); color: var(--muted); font-size: 13px; line-height: 1.6; }
+.constellation-selection strong { display: block; margin-bottom: 5px; color: #f0eaff; }
+.constellation-list { display: none; }
+
+@keyframes explorerIn { from { opacity: 0; transform: translateY(14px) scale(.98); } to { opacity: 1; transform: none; } }
+@media (max-width: 800px) { .project-explorer-body,.constellation-shell { grid-template-columns: 1fr; } .constellation-stage { min-height: 460px; } }
+@media (max-width: 600px) { .project-explorer-dialog { width: calc(100vw - 20px); max-height: calc(100dvh - 20px); border-radius: 18px; } .project-explorer-head,.project-explorer-body { padding-inline: 17px; } .constellation-shell { padding: 12px; } .constellation-stage { display: none; } .constellation-list { display: grid; gap: 8px; } .constellation-list button { padding: 12px; border: 1px solid rgba(0,240,255,.2); border-radius: 12px; color: var(--text); background: rgba(5,18,34,.7); text-align: left; font: 11px var(--mono); } }
+
+/* Keep the large recipe artwork lazy-loadable through the project card image. */
+.art-findmyrecipe { background: radial-gradient(circle at 50% 40%, #123c56, #11152c 55%, #080b18) !important; }
+
+/* Defer layout/paint work for long case-study sections until they approach the viewport. */
+main > .section:not(#hero):not(#about):not(#digital-nizam) { content-visibility: auto; contain-intrinsic-size: 1px 900px; }
+
+img[loading="lazy"] { content-visibility: auto; contain-intrinsic-size: 320px 240px; }
+
+@media (max-width: 767px) {
+  main > .section:not(#hero):not(#about):not(#digital-nizam) { contain-intrinsic-size: 1px 700px; }
+}
+
+@media (pointer: coarse) {
+  .site-header.scrolled, .desktop-nav, .tech-badge, .code-float, .project-card, .skill-card { backdrop-filter: none; }
+  .hero-glow { filter: none; }
+}

@@ -4,6 +4,15 @@
   const $$ = (s, root = document) => [...root.querySelectorAll(s)];
   const header = $('.site-header'), backTop = $('.back-top');
   $('#year').textContent = new Date().getFullYear();
+  $$('img').forEach(image => { image.decoding = 'async'; });
+  const faqGrid = $('#faq .faq-grid');
+  if (faqGrid) {
+    const specializationCard = [...faqGrid.querySelectorAll('.skill-card')].find(card => card.querySelector('h3')?.textContent.trim() === 'What does Nizamuddin specialize in?');
+    if (specializationCard) specializationCard.querySelector('p').textContent = 'He specializes in Android, Kotlin, Jetpack Compose, React Native, TypeScript, Expo, Flutter, Dart, Clean Architecture, Android architecture, Mobile AI, LLM integration, Supabase, SDKs, and developer tooling.';
+    if (!faqGrid.querySelector('[data-faq-react-native]')) faqGrid.insertAdjacentHTML('beforeend', '<article class="skill-card" data-faq-react-native><h3>What has he built with React Native?</h3><p>He built AI Vision, an AI-powered React Native OCR and image-analysis application using TypeScript, Expo, camera and gallery workflows, navigation, React Hooks, Supabase-backed AI analysis, dynamic structured responses, animations, bottom sheets, and loading, result, and error states.</p></article>');
+  }
+  const heroKicker = $('.hero-kicker'); if (heroKicker) heroKicker.innerHTML = 'Senior Mobile Engineer <span class="slash">/</span> Android + React Native + AI';
+  const heroDescription = $('.hero-description'); if (heroDescription) heroDescription.textContent = 'Building production mobile experiences across Android and React Native, with AI and real-world impact.';
 
   // Build the hero perimeter as an SVG stroke so the highlight follows the actual rounded panel.
   const heroPanel = $('.portrait-composition');
@@ -18,21 +27,37 @@
     [['hero-perimeter-base','1.5',''],['hero-perimeter-glow','3','.22 .78'],['hero-perimeter-travel','2.2','.065 .935']].forEach(([className, width, dash]) => { const rect = document.createElementNS(svgNS, 'rect'); rect.classList.add(className); rect.setAttribute('x', '2'); rect.setAttribute('y', '2'); rect.setAttribute('width', '996'); rect.setAttribute('height', '696'); rect.setAttribute('rx', '32'); rect.setAttribute('pathLength', '1'); rect.setAttribute('stroke-width', width); if (dash) rect.setAttribute('stroke-dasharray', dash); svg.appendChild(rect); });
     heroPanel.prepend(svg);
   }
+  const heroDepth = $('.hero-editorial-visual');
+  const heroFinePointer = matchMedia('(pointer:fine)').matches && !matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (heroDepth && heroFinePointer) {
+    let heroFrame = 0, heroX = 50, heroY = 50;
+    heroDepth.addEventListener('pointermove', event => {
+      const bounds = heroDepth.getBoundingClientRect();
+      heroX = ((event.clientX - bounds.left) / bounds.width) * 100;
+      heroY = ((event.clientY - bounds.top) / bounds.height) * 100;
+      heroDepth.classList.add('is-pointer-active');
+      if (!heroFrame) heroFrame = requestAnimationFrame(() => { heroDepth.style.setProperty('--hero-pointer-x', `${heroX}%`); heroDepth.style.setProperty('--hero-pointer-y', `${heroY}%`); heroFrame = 0; });
+    }, { passive: true });
+    heroDepth.addEventListener('pointerleave', () => { heroDepth.classList.remove('is-pointer-active'); heroDepth.style.setProperty('--hero-pointer-x', '50%'); heroDepth.style.setProperty('--hero-pointer-y', '50%'); });
+  }
 
   const menu = $('.menu-toggle'), nav = $('.desktop-nav');
   menu?.addEventListener('click', () => { const open = nav.classList.toggle('open'); menu.setAttribute('aria-expanded', open); menu.innerHTML = `<i class="bi bi-${open ? 'x' : 'list'}"></i>`; });
   $$('.desktop-nav a').forEach(link => link.addEventListener('click', () => { nav.classList.remove('open'); menu?.setAttribute('aria-expanded', 'false'); menu.innerHTML = '<i class="bi bi-list"></i>'; }));
 
-  let lastScrollY = window.scrollY, scrollFrame = 0;
+  let lastScrollY = window.scrollY, scrollFrame = 0, scrollRange = 1;
+  const updateScrollRange = () => { scrollRange = Math.max(1, document.documentElement.scrollHeight - innerHeight); };
   function onScroll() {
     const y = window.scrollY;
     lastScrollY = y;
     header?.classList.toggle('scrolled', y > 20);
     backTop?.classList.toggle('visible', y > 600);
-    if (!scrollFrame) scrollFrame = requestAnimationFrame(() => { document.documentElement.style.setProperty('--scroll-progress', `${Math.min(1, y / Math.max(1, document.documentElement.scrollHeight - innerHeight))}`); document.documentElement.style.setProperty('--scroll-light-x', `${50 + Math.sin(y / 700) * 8}%`); scrollFrame = 0; });
+    if (!scrollFrame) scrollFrame = requestAnimationFrame(() => { document.documentElement.style.setProperty('--scroll-progress', `${Math.min(1, y / scrollRange)}`); document.documentElement.style.setProperty('--scroll-light-x', `${50 + Math.sin(y / 700) * 8}%`); scrollFrame = 0; });
   }
   addEventListener('scroll', onScroll, { passive: true });
-  addEventListener('resize', onScroll, { passive: true });
+  addEventListener('resize', () => { updateScrollRange(); onScroll(); }, { passive: true });
+  if ('ResizeObserver' in window) new ResizeObserver(updateScrollRange).observe(document.body);
+  updateScrollRange();
   onScroll();
 
   const sections = $$('main section[id]'), links = $$('.desktop-nav a');
@@ -43,11 +68,11 @@
   const counterObserver = new IntersectionObserver(entries => entries.forEach(entry => { if (!entry.isIntersecting) return; const el = entry.target, end = Number(el.dataset.counter), start = performance.now(); const tick = now => { const progress = Math.min((now - start) / 1100, 1); el.textContent = Math.floor(progress * end) + '+'; if (progress < 1) requestAnimationFrame(tick); }; requestAnimationFrame(tick); counterObserver.unobserve(el); }), { threshold: .6 });
   counters.forEach(el => counterObserver.observe(el));
 
-  if (window.AOS && !matchMedia('(prefers-reduced-motion: reduce)').matches) { AOS.init({ duration: 750, easing: 'ease-out-cubic', once: true, offset: 80 }); document.documentElement.classList.add('aos-enabled'); }
+  if (window.AOS && !matchMedia('(prefers-reduced-motion: reduce)').matches) { AOS.init({ duration: 520, easing: 'ease-out-cubic', once: true, offset: 80, throttleDelay: 80, debounceDelay: 80 }); const originalAOSRefresh = AOS.refresh.bind(AOS); let aosRefreshFrame = 0; AOS.refresh = () => { cancelAnimationFrame(aosRefreshFrame); aosRefreshFrame = requestAnimationFrame(() => originalAOSRefresh()); }; document.documentElement.classList.add('aos-enabled'); }
 
   // Boot sequence: keep it short, skippable, and never block navigation.
   const boot = $('#boot-screen');
-  setTimeout(() => boot?.classList.add('is-done'), matchMedia('(prefers-reduced-motion: reduce)').matches ? 300 : 2400);
+  setTimeout(() => boot?.classList.add('is-done'), matchMedia('(prefers-reduced-motion: reduce)').matches ? 150 : 1100);
   boot?.addEventListener('click', () => boot.classList.add('is-done'));
 
   // Command center / keyboard navigation.
@@ -314,18 +339,27 @@
   const formatAIResponse = text => { const lines = String(text).split(/\r?\n/), html = []; let list = []; const flushList = () => { if (list.length) { html.push(`<ul>${list.map(item => `<li>${formatAIInline(item)}</li>`).join('')}</ul>`); list = []; } }; lines.forEach(line => { const trimmed = line.trim(); if (!trimmed) { flushList(); return; } if (/^[-*•]\s+/.test(trimmed)) { list.push(trimmed.replace(/^[-*•]\s+/, '')); return; } flushList(); if (/^(problem|solution|architecture|lessons?|technologies|challenges?|future|engineering|mission|why i built it)\s*:?$/i.test(trimmed)) html.push(`<div class="ai-section-label">${escapeAI(trimmed.replace(/:$/, ''))}</div>`); else if (/^```/.test(trimmed)) html.push(`<pre class="ai-code-block" data-language="${escapeAI(trimmed.replace(/```/, '') || 'code')}"><code>`); else if (/^https?:\/\//.test(trimmed)) html.push(`<a class="ai-action-link" href="${escapeAI(trimmed)}" target="_blank" rel="noopener noreferrer"><i class="bi bi-arrow-up-right"></i> Open resource</a>`); else html.push(`<p>${formatAIInline(trimmed)}</p>`); }); flushList(); return html.join(''); };
   const resourceHrefs = { 'adaptive-exercise-recognition':'#adaptive-exercise-recognition', archguard:'https://github.com/NonCoderF/ArchGuard', sonicbridge:'#sonicbridge', 'tapori-ai':'https://github.com/NonCoderF/tapori-ai', 'biometric-sdk':'https://github.com/NonCoderF/biometric-sdk', 'sally-launcher':'https://play.google.com/store/apps/details?id=com.code.amiles.sally.free&hl=en_IN', findmyrecipe:'https://github.com/NonCoderF/CookWare', formfit:'#formfit' };
   const resourceTitles = { 'adaptive-exercise-recognition':'Adaptive Exercise Recognition', archguard:'ArchGuard', sonicbridge:'SonicBridge', 'tapori-ai':'Tapori AI', 'biometric-sdk':'Biometric SDK', 'sally-launcher':'Sally Launcher', findmyrecipe:'FindMyRecipe', formfit:'FormFit' };
+  const trustedGuideRoutes = { 'adaptive-exercise-recognition':'#adaptive-exercise-recognition', archguard:'#archguard', sonicbridge:'#sonicbridge', 'tapori-ai':'#tapori-ai', taporiai:'#tapori-ai', findmyrecipe:'#project-index', formfit:'#formfit', 'biometric-sdk':'#project-index', 'digital-me':'#digital-nizam' };
+  const trustedGuideAliases = [
+    { id: 'adaptive-exercise-recognition', title: 'Adaptive Exercise Recognition', words: ['computer vision', 'exercise recognition', 'squat detector', 'pose landmarks'] },
+    { id: 'archguard', title: 'ArchGuard', words: ['architecture work', 'architecture rules', 'gradle plugin', 'clean architecture'] },
+    { id: 'formfit', title: 'FormFit', words: ['formfit', 'fitness project', 'movement tracking'] },
+    { id: 'tapori-ai', title: 'Tapori AI', words: ['tapori', 'flutter architecture', 'ai chat'] },
+    { id: 'findmyrecipe', title: 'FindMyRecipe', words: ['findmyrecipe', 'recipe project'] },
+    { id: 'digital-me', title: 'Digital Me', words: ['digital me', 'professional profile'] }
+  ];
+  const sanitizeGuideResource = resource => { if (!resource || (resource.id && !resourceHrefs[resource.id] && !trustedGuideRoutes[resource.id])) return null; return { ...resource, route: trustedGuideRoutes[resource.id] || null, title: resource.title || resourceTitles[resource.id] || resource.id }; };
   const inferResources = (resources, prompt, reply) => {
-    if (Array.isArray(resources) && resources.length) return resources;
+    if (Array.isArray(resources) && resources.length) return resources.map(sanitizeGuideResource).filter(Boolean);
     const text = `${prompt || ''} ${reply || ''}`.toLowerCase();
-    return Object.keys(resourceHrefs).map(id => ({ id, title: resourceTitles[id] || id }))
-      .filter(resource => text.includes(resource.title.toLowerCase()) || text.includes(resource.id.replaceAll('-', ' ')))
-      .slice(0, 1);
+    return trustedGuideAliases.filter(resource => resource.words.some(word => text.includes(word))).slice(0, 3).map(sanitizeGuideResource);
   };
   const appendResourceCards = (resources, prompt = '', reply = '') => inferResources(resources, prompt, reply).flatMap(resource => {
     const cards = [];
     const title = resource.title || resource.id;
     const renderCard = (href, label) => href ? `<div class="ai-project-card"><strong>${escapeAI(title)}</strong><span class="ai-project-status">${escapeAI(String(resource.type || 'resource').toUpperCase())}</span>${resource.subtitle ? `<small>${escapeAI(resource.subtitle)}</small>` : ''}<div class="ai-project-actions"><a href="${escapeAI(href)}" ${String(href).startsWith('http') ? 'target="_blank" rel="noopener noreferrer"' : ''}><i class="bi bi-arrow-up-right"></i> ${escapeAI(label)}</a></div></div>` : '';
-    if (resource.url) cards.push(renderCard(resource.url, 'View Source'));
+    if (resource.route) cards.push(renderCard(resource.route, 'Open portfolio section'));
+    else if (resource.url) cards.push(renderCard(resource.url, 'View Source'));
     if (resource.playStoreUrl) cards.push(renderCard(resource.playStoreUrl, 'View on Google Play'));
     if (!cards.length) cards.push(renderCard(resourceHrefs[resource.id], 'Open resource'));
     return cards;
@@ -336,13 +370,11 @@
   const think = async (node, request) => { let index = 0; node.textContent = thinkingPhases[index]; const timer = setInterval(() => { index = (index + 1) % thinkingPhases.length; node.textContent = thinkingPhases[index]; }, 5000); try { return await request; } finally { clearInterval(timer); } };
   const askAssistant = async question => { const prompt = String(question || '').trim(); if (!prompt || !window.NizamApi || assistantForm?.dataset.busy === 'true') return; assistantForm.dataset.busy = 'true'; if (assistantInput) assistantInput.readOnly = true; postAssistant(prompt, 'user-message'); const thinking = postAssistant('Thinking...', 'assistant-typing reveal'); const started = performance.now(); try { const history = await getAssistantHistory(); const request = window.NizamApi.askNizam(prompt, history); const result = await think(thinking, request); const reply = typeof result === 'string' ? result : result.reply; const resources = typeof result === 'string' ? [] : result.resources; thinking.remove(); await streamResponse(reply, resources, prompt); await assistantMemory.save(prompt, reply); $('.ai-memory-summary', assistantMessages)?.remove(); renderMemoryHistory(); const latency = Math.max(1, Math.round(performance.now() - started)); if ($('#ai-latency')) $('#ai-latency').textContent = `${latency}ms`; if ($('#ai-last-response')) $('#ai-last-response').textContent = 'Now'; } catch (error) { thinking.remove(); if (error.name !== 'AbortError') postAssistant(assistantError, 'reveal'); } finally { assistantForm.dataset.busy = 'false'; if (assistantInput) assistantInput.readOnly = false; } };
   const closeAssistant = () => { assistantDismissRequested = true; setAssistantOpen(false); };
+  assistant?.addEventListener('click', event => { if (assistant.classList.contains('open') && !event.target.closest('.assistant-panel') && !event.target.closest('.assistant-trigger')) closeAssistant(); });
   addEventListener('popstate', () => {
     if (!assistant?.classList.contains('open')) return;
-    if (keyboardIsOpen() || assistantKeyboardDismissed) {
-      restoreAssistantHistory();
-      return;
-    }
     assistantHistoryActive = false;
+    assistantDismissRequested = true;
     setAssistantOpen(false);
   });
   assistantTrigger?.addEventListener('click', event => { pendingAssistantOriginRect = event.currentTarget.getBoundingClientRect(); }, true);
@@ -352,7 +384,7 @@
   assistantClose?.addEventListener('pointerdown', () => { assistantDismissRequested = true; }, { passive: true });
   assistantClose?.addEventListener('click', closeAssistant);
   addEventListener('keydown', event => { if (event.key === 'Escape' && assistant?.classList.contains('open')) closeAssistant(); });
-  const formfitQuestions = ['Why did you build FormFit?', 'How are FormFit and FindMyRecipe connected?', 'What technologies power FormFit?'];
+  const formfitQuestions = ['Why did you build FormFit?', 'How are FormFit and FindMyRecipe connected?', 'What technologies power FormFit?', 'When did you start using React Native?', 'Why did you choose React Native for OCR?', 'Explain your OCR architecture.', 'React Native vs Flutter vs native Android?', 'How do you optimize FlatList rendering?', 'What did you build at Geekworkx?'];
   $$('.assistant-prompts,.prompt-list').forEach(group => formfitQuestions.forEach(question => { if ([...group.querySelectorAll('button')].some(button => button.textContent.trim() === question)) return; const button = document.createElement('button'); button.type = 'button'; button.textContent = question; group.appendChild(button); button.addEventListener('click', () => askAssistant(question)); }));
   $$('.assistant-prompts button,.prompt-list button').forEach(button => button.addEventListener('click', () => askAssistant(button.textContent)));
   $('.assistant-inline-open')?.addEventListener('click', event => { event.preventDefault(); openAssistant(); renderMemoryHistory(); });
@@ -383,9 +415,99 @@
   const moduleLabels = {'#about':'01 / ABOUT','#digital-nizam':'02 / DIGITAL ME','#work':'03 / FEATURED PROJECTS','#adaptive-exercise-recognition':'04 / ADAPTIVE EXERCISE RECOGNITION','#project-index':'05 / CASE NOTES','#flutter-journey':'06 / FLUTTER POSITIONING','#ai-engineering':'07 / AI ENGINEERING','#experience':'08 / EXPERIENCE','#skills':'09 / SKILLS','#writing':'10 / ENGINEERING ARTICLES','#faq':'11 / FAQ','#contact':'12 / CONTACT','#device-lab':'13 / DEVICE LAB','#architecture':'14 / LIVE ARCHITECTURE','#nexus-universe':'NEXUS / ENGINEERING BEYOND SOFTWARE','#sonicbridge':'02 / SONICBRIDGE / PRIVATE AUDIO'}; Object.entries(moduleLabels).forEach(([selector,label]) => { const node = document.querySelector(`${selector} .section-index`); if (node) node.textContent = label; }); $$('.brand-name').forEach(node => { node.innerHTML = 'Nizamuddin<span> / Mobile AI</span>'; }); if ($('.boot-title')) $('.boot-title').textContent = 'DIGITAL ME / MOBILE ENGINEERING COMMAND CENTER';
   // JSON data source: when served statically the UI renders from editable files; opening index.html keeps the curated fallback markup.
   const esc = value => String(value).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+  const projectArchitectures = {
+    'ai-vision-ocr': 'Camera capture -> gallery selection -> Supabase Edge Function -> AI image analysis -> dynamic structured results',
+    'adaptive-exercise-recognition': 'Camera -> existing pose landmarks -> validation gates -> TensorFlow Lite classifier -> rep detection',
+    taporiai: 'Flutter UI -> Riverpod -> Use Cases -> Repository -> Dio -> Supabase Edge Functions -> OpenAI',
+    archguard: 'Gradle plugin -> architecture rules -> feature-first validation -> HTML reports',
+    formfit: 'CameraX -> ML Kit Pose Detection -> TensorFlow Lite -> MVVM -> Clean Architecture',
+    sonicbridge: 'Android TV -> AudioPlaybackCapture -> WebSockets -> PCM -> AudioTrack',
+    findmyrecipe: 'Android app -> ingredient capture -> AI identification -> recipe discovery',
+    'biometric-sdk': 'Android SDK -> lifecycle-aware BiometricPrompt -> reusable integration API',
+    'digital-me': 'Portfolio UI -> Supabase Edge Function -> OpenAI / LLM -> curated professional context'
+  };
+  let portfolioProjects = [];
+  const projectIdForCard = card => {
+    const title = $('h3', card)?.textContent.toLowerCase() || '';
+    return Object.keys(projectArchitectures).find(id => id === 'ai-vision-ocr' ? title.includes('ai vision') || title.includes('intelligent ocr') : title.includes(id === 'taporiai' ? 'tapori ai' : id.replaceAll('-', ' '))) || (title.includes('adaptive exercise') ? 'adaptive-exercise-recognition' : null);
+  };
+  const createProjectExplorer = () => {
+    if ($('#project-explorer')) return $('#project-explorer');
+    const dialog = document.createElement('dialog');
+    dialog.id = 'project-explorer'; dialog.className = 'project-explorer-dialog'; aria(dialog, 'modal', 'true');
+    document.body.appendChild(dialog);
+    dialog.addEventListener('click', event => { if (event.target === dialog || event.target.closest('.project-explorer-close')) closeProjectExplorer(); });
+    dialog.addEventListener('click', event => { if (event.target.closest('a[href^="#"]')) closeProjectExplorer(); });
+    return dialog;
+  };
+  const aria = (node, name, value) => node.setAttribute(`aria-${name}`, value);
+  const closeProjectExplorer = () => { const dialog = $('#project-explorer'); if (!dialog) return; if (dialog.open && dialog.close) dialog.close(); else dialog.removeAttribute('open'); if (location.hash.startsWith('#project-')) history.back(); };
+  const openProjectExplorer = id => {
+    const project = portfolioProjects.find(item => item.id === id); if (!project) return;
+    const dialog = createProjectExplorer();
+    const links = Array.isArray(project.links) && project.links.length ? project.links : (project.href ? [{ label: `Open ${project.name}`, href: project.href, primary: true }] : []);
+    dialog.innerHTML = `<div class="project-explorer-head"><div><span class="project-explorer-kicker">SYSTEM INSPECTOR / ${esc(String(project.status || 'PROJECT'))}</span><h2>${esc(project.name)}</h2></div><button class="project-explorer-close" type="button" aria-label="Close project inspector">×</button></div><div class="project-explorer-body"><div class="project-explorer-summary"><p>${esc(project.description || '')}</p>${project.role ? `<span class="project-explorer-label">Engineering role</span><p>${esc(project.role)}</p>` : ''}${project.challenge ? `<span class="project-explorer-label">Engineering challenge</span><p>${esc(project.challenge)}</p>` : ''}<span class="project-explorer-label">Verified stack</span><div class="project-explorer-stack">${(project.technologies || []).map(item => `<span>${esc(item)}</span>`).join('')}</div></div><aside class="project-explorer-side">${project.image ? `<div class="project-explorer-media"><img src="${esc(project.image)}" alt="${esc(project.imageAlt || project.name)}"></div>` : ''}<div><span class="project-explorer-label">Architecture notes</span><div class="project-explorer-architecture">${esc(projectArchitectures[id] || 'Architecture details are not published for this project.')}</div></div><div class="project-explorer-links">${links.map(link => `<a class="${link.primary ? 'btn-primary' : 'btn-quiet'}" href="${esc(link.href)}" ${String(link.href).startsWith('#') ? '' : 'target="_blank" rel="noopener noreferrer"'}>${esc(link.label)} <i class="bi bi-arrow-up-right"></i></a>`).join('')}</div></aside></div>`;
+    if (dialog.showModal) dialog.showModal(); else dialog.setAttribute('open', '');
+    if (!location.hash.startsWith('#project-')) history.pushState({ ...(history.state || {}), projectExplorer: id }, '', `#project-${id}`);
+  };
+  const decorateProjectCards = () => {
+    $$('.projects-grid .project-card,.digital-me-card').forEach(card => {
+      const id = projectIdForCard(card); if (!id) return; card.dataset.projectId = id;
+      if ($('.project-inspect-button', card)) return;
+      const content = $('.project-content', card); if (!content) return;
+      const button = document.createElement('button'); button.type = 'button'; button.className = 'project-inspect-button'; button.innerHTML = 'Inspect system <i class="bi bi-arrow-up-right"></i>'; button.addEventListener('click', () => openProjectExplorer(id)); content.appendChild(button);
+    });
+  };
+  const projectGridObserver = new MutationObserver(decorateProjectCards);
+  if ($('.projects-grid')) projectGridObserver.observe($('.projects-grid'), { childList: true, subtree: true });
+  addEventListener('popstate', () => { if ($('#project-explorer')?.open) { $('#project-explorer').close(); } });
+  const constellationProjects = {
+    'adaptive-exercise-recognition': { label: 'Adaptive ML', route: '#adaptive-exercise-recognition' },
+    formfit: { label: 'FormFit', route: '#formfit' },
+    findmyrecipe: { label: 'FindMyRecipe', route: '#project-index' },
+    taporiai: { label: 'Tapori AI', route: '#tapori-ai' },
+    sonicbridge: { label: 'SonicBridge', route: '#sonicbridge' },
+    archguard: { label: 'ArchGuard', route: '#archguard' },
+    'biometric-sdk': { label: 'Biometric SDK', route: '#project-index' },
+    'digital-me': { label: 'Digital Me', route: '#digital-nizam' },
+    'ai-vision-ocr': { label: 'AI Vision OCR', route: '#ai-vision' }
+  };
+  const constellationTech = [
+    ['kotlin','Kotlin',20,12], ['compose','Jetpack Compose',20,27], ['flutter','Flutter',20,42], ['react-native','React Native',20,57], ['supabase','Supabase',20,72], ['computer-vision','Computer Vision',20,87],
+    ['formfit','FormFit',78,10], ['findmyrecipe','FindMyRecipe',82,24], ['taporiai','Tapori AI',80,39], ['ai-vision-ocr','AI Vision OCR',78,54], ['sonicbridge','SonicBridge',80,69], ['archguard','ArchGuard',78,84], ['digital-me','Digital Me',62,94]
+  ];
+  const constellationRelationships = { kotlin: ['adaptive-exercise-recognition','formfit','findmyrecipe','taporiai','archguard','biometric-sdk'], compose: ['formfit','findmyrecipe','taporiai'], flutter: ['taporiai'], 'react-native': ['ai-vision-ocr','taporiai'], supabase: ['findmyrecipe','taporiai','ai-vision-ocr','digital-me'], 'computer-vision': ['adaptive-exercise-recognition','formfit'], formfit: ['kotlin','compose','computer-vision'], findmyrecipe: ['kotlin','compose','supabase'], taporiai: ['kotlin','compose','flutter','react-native','supabase'], 'ai-vision-ocr': ['react-native','supabase'], sonicbridge: ['websockets'], archguard: ['gradle-plugin','kotlin'], 'digital-me': ['supabase','computer-vision'], 'gradle-plugin': ['archguard'], websockets: ['sonicbridge'] };
+  const constellationTechExtras = [['gradle-plugin','Gradle Plugin',44,77],['websockets','WebSockets',47,61]];
+  const buildConstellation = () => {
+    if ($('#technology-constellation') || !$('#work')) return;
+    const nodes = [...constellationTech, ...constellationTechExtras];
+    const techIds = new Set(['kotlin','compose','flutter','react-native','supabase','computer-vision','gradle-plugin','websockets']);
+    const projectNodes = nodes.filter(node => !techIds.has(node[0]));
+    const edges = [];
+    nodes.filter(node => techIds.has(node[0])).forEach(tech => (constellationRelationships[tech[0]] || []).forEach(projectId => { const target = nodes.find(node => node[0] === projectId); if (target) edges.push(`<line class="constellation-edge" data-tech="${tech[0]}" data-project="${projectId}" x1="${tech[2]}" y1="${tech[3]}" x2="${target[2]}" y2="${target[3]}" vector-effect="non-scaling-stroke"></line>`); }));
+    const nodeButtons = nodes.map(([id,label,x,y]) => `<button class="constellation-node" data-node-id="${id}" data-kind="${techIds.has(id) ? 'technology' : 'project'}" style="left:${x}%;top:${y}%" type="button">${esc(label)}</button>`).join('');
+    const mobileList = projectNodes.map(([id,label]) => `<button type="button" data-node-id="${id}">${esc(label)} <i class="bi bi-arrow-up-right"></i></button>`).join('');
+    $('#work').insertAdjacentHTML('afterend', `<section id="technology-constellation" class="section technology-constellation-section"><div class="container"><div class="section-heading heading-row" data-aos="fade-up"><div><span class="section-index">03A / SYSTEM MAP</span><h2>Technologies in<br><em>relationship.</em></h2></div><p class="heading-note">Select a technology or project to see the verified connections inside the portfolio.</p></div><div class="constellation-shell" data-aos="fade-up"><div class="constellation-stage" aria-label="Interactive technology and project relationship graph"><svg class="constellation-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${edges.join('')}</svg>${nodeButtons}</div><div class="constellation-list" aria-label="Project relationship list">${mobileList}</div><aside class="constellation-legend"><h3>System map</h3><p>Relationships are derived from the published project and skills data. Hover, focus, or tap a node to trace its connected work.</p><div class="constellation-selection" aria-live="polite"><strong>Select a node</strong>Connected technologies and projects will appear here.</div></aside></div></div></section>`);
+    const selection = $('.constellation-selection');
+    const selectNode = (id, navigate = false) => {
+      const isTech = techIds.has(id); const related = constellationRelationships[id] || [];
+      $$('.constellation-node').forEach(node => { const nodeId = node.dataset.nodeId; const connected = nodeId === id || related.includes(nodeId) || (isTech ? false : related.includes(nodeId)); node.classList.toggle('is-selected', nodeId === id); node.classList.toggle('is-muted', !connected); });
+      $$('.constellation-edge').forEach(edge => edge.classList.toggle('is-connected', edge.dataset.tech === id || edge.dataset.project === id || related.includes(edge.dataset.tech) || related.includes(edge.dataset.project)));
+      const title = isTech ? nodes.find(node => node[0] === id)?.[1] : constellationProjects[id]?.label || id;
+      const relatedLabels = related.map(item => nodes.find(node => node[0] === item)?.[1] || constellationProjects[item]?.label || item).filter(Boolean);
+      if (selection) selection.innerHTML = `<strong>${esc(title || id)}</strong>${isTech ? `Connected projects: ${esc(relatedLabels.join(', ') || 'No published connection yet.')}` : `Connected technologies: ${esc(relatedLabels.join(', ') || 'See the project inspector for published details.')}`}`;
+      if (navigate && !isTech && constellationProjects[id]?.route) document.querySelector(constellationProjects[id].route)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+    $$('.constellation-node,.constellation-list button').forEach(node => { node.addEventListener('mouseenter', () => selectNode(node.dataset.nodeId)); node.addEventListener('focus', () => selectNode(node.dataset.nodeId)); node.addEventListener('click', () => selectNode(node.dataset.nodeId, true)); });
+    if (location.hash === '#technology-constellation') requestAnimationFrame(() => $('#technology-constellation')?.scrollIntoView({ behavior: 'auto', block: 'start' }));
+    if (window.AOS) AOS.refresh();
+  };
   const loadPortfolioData = async () => { try { const [projects, skills] = await Promise.all([fetch('data/projects.json').then(r => r.json()), fetch('data/skills.json').then(r => r.json())]); const grid = $('.projects-grid'); if (grid) grid.innerHTML = projects.slice(0, 7).map((p,i) => { const links = Array.isArray(p.links) && p.links.length ? p.links : [{ label: `Open ${p.name} module`, href: p.href, primary: i === 0 }]; const icon = p.id === 'adaptive-exercise-recognition' ? 'activity' : p.id === 'archguard' ? 'shield-check' : p.id === 'sonicbridge' ? 'headphones' : p.id === 'biometric-sdk' ? 'fingerprint' : p.id === 'formfit' ? 'activity' : p.id.startsWith('findmyrecipe') ? (p.id.endsWith('play') ? 'google-play' : 'book') : p.id === 'medium-articles' ? 'journal-richtext' : 'stars'; return `<article class="project-card ${i===0?'project-featured flagship-project':''} ${p.id === 'formfit' ? 'formfit-project-card' : ''}" data-aos="fade-up"><div class="project-art art-${esc(p.id)}" role="img" aria-label="${esc(p.imageAlt || `${p.name} project visual`)}">${p.image ? `<img src="${esc(p.image)}" alt="${esc(p.imageAlt || `${p.name} project visual`)}" loading="lazy">` : ''}<span class="art-label">${esc(p.type).toUpperCase()}</span><div class="shield-icon"><i class="bi bi-${icon}"></i></div></div><div class="project-content"><div class="project-meta"><span>${esc(p.status)} / ${esc(p.version)}</span><i class="bi bi-arrow-up-right"></i></div><h3>${esc(p.name)}</h3><p>${esc(p.description)}</p>${p.role ? `<p><strong>My role:</strong> ${esc(p.role)}</p>` : ''}${p.challenge ? `<p><strong>Challenge:</strong> ${esc(p.challenge)}</p>` : ''}<div class="tag-row">${p.technologies.map(t=>`<span>${esc(t)}</span>`).join('')}</div><div class="project-actions">${links.map(link => `<a class="${link.primary ? 'btn-primary' : 'btn-quiet'}" href="${esc(link.href)}" ${String(link.href).startsWith('#') ? '' : 'target="_blank" rel="noopener noreferrer"'}>${esc(link.label)} <i class="bi bi-arrow-up-right"></i></a>`).join('')}</div>${p.note ? `<p class="project-note">${esc(p.note)}</p>` : ''}</div></article>`; }).join(''); const skillGrid = $('.skills-grid'); if (skillGrid) skillGrid.innerHTML = Object.entries(skills).map(([name,items]) => `<div class="skill-card" data-aos="fade-up"><i class="bi bi-cpu"></i><h3>${esc(name)}</h3><div class="tag-row">${items.map(t=>`<span>${esc(t)}</span>`).join('')}</div></div>`).join(''); if (window.AOS) AOS.refresh(); } catch (error) { document.documentElement.dataset.dataMode = 'fallback'; } }; loadPortfolioData();
+
+  const mountOcrShowcase = async () => { try { const response = await fetch('data/ocr-showcase.html'); if (!response.ok) return; const marker = document.querySelector('#adaptive-exercise-recognition'); if (!marker) return; marker.insertAdjacentHTML('beforebegin', await response.text()); $$('.desktop-nav').forEach(nav => { if (!nav.querySelector('[href="#ai-vision"]')) nav.insertAdjacentHTML('beforeend', '<a href="#ai-vision">AI Vision</a><a href="#react-native">React Native</a>'); }); if (window.AOS) AOS.refresh(); const copy = { capture: ['CURRENT STAGE / CAMERA CAPTURE', 'Start with a useful input.', 'The workflow begins with a captured image, then keeps the user oriented as the request moves through the app.'], gallery: ['CURRENT STAGE / IMAGE STORAGE', 'Keep the visual input available.', 'Gallery and image storage make the visual input available for a deliberate selection step.'], selection: ['CURRENT STAGE / IMAGE SELECTION', 'Choose the image that matters.', 'Selection separates capture from analysis and gives the user control over what is sent onward.'], edge: ['CURRENT STAGE / SUPABASE EDGE FUNCTION', 'Move the expensive work behind a boundary.', 'The mobile client hands the image-analysis request to the Supabase-backed server boundary.'], ai: ['CURRENT STAGE / AI IMAGE ANALYSIS', 'Turn pixels into useful interpretation.', 'The AI layer analyzes the selected image so the app can present more than raw capture.'], response: ['CURRENT STAGE / STRUCTURED RESPONSE', 'Keep the response shape useful.', 'Dynamic DTO handling allows the result surface to stay expressive as structured data evolves.'], ui: ['CURRENT STAGE / DYNAMIC RESULTS UI', 'Make the answer readable.', 'Loading, result, error, animation, and bottom-sheet states turn analysis into a usable mobile experience.'] }; const detail = document.querySelector('[data-ocr-detail]'); document.querySelectorAll('[data-ocr-stage]').forEach(node => node.addEventListener('click', () => { document.querySelectorAll('[data-ocr-stage]').forEach(item => item.classList.toggle('is-active', item === node)); const item = copy[node.dataset.ocrStage] || copy.capture; if (detail) detail.innerHTML = `<span class="module-index">${esc(item[0])}</span><h3>${esc(item[1])}</h3><p>${esc(item[2])}</p>`; })); } catch (error) { document.documentElement.dataset.ocrShowcase = 'fallback'; } }; mountOcrShowcase();
 
   // Nexus departments are content modules: editors change JSON, not layout code.
   const renderNexus = async () => { try { const [software,research,product,timeline,roadmap] = await Promise.all(['software','research','product','timeline','roadmap'].map(file => fetch(`data/${file}.json`).then(r => r.json()))); const principles = $('#software-principles'); if (principles) principles.innerHTML = `<ul>${software.principles.map(item => `<li>${esc(item)}</li>`).join('')}</ul>`; const softwareCards = $('#software-cards'); if (softwareCards) softwareCards.innerHTML = software.modules.map(item => `<article class="nexus-card"><div class="card-top"><span>${esc(item.type)}</span><b>${esc(item.status)}</b></div><h4>${esc(item.name)}</h4><p>${esc(item.lesson)}</p><span class="card-focus">${esc(item.focus)}</span></article>`).join(''); const researchCards = $('#research-cards'); if (researchCards) researchCards.innerHTML = research.topics.map(item => `<article class="nexus-card"><div class="card-top"><span>RESEARCH NODE</span><b>${esc(item.status)}</b></div><h4>${esc(item.name)}</h4><p>${esc(item.description)}</p></article>`).join(''); const productCards = $('#product-cards'); if (productCards) productCards.innerHTML = product.concepts.map(item => `<article class="product-card"><span>${esc(item.tag).toUpperCase()}</span><h4>${esc(item.name)}</h4><p>${esc(item.description)}</p></article>`).join(''); const timelineNodes = $('#timeline-nodes'); if (timelineNodes) timelineNodes.innerHTML = timeline.map(item => `<article class="timeline-node"><b>${esc(item.year)}</b><h4>${esc(item.label)}</h4><p>${esc(item.description)}</p></article>`).join(''); const roadmapCards = $('#roadmap-cards'); if (roadmapCards) roadmapCards.innerHTML = roadmap.map(item => `<article class="roadmap-card"><span>${esc(item.version)}</span><h4>${esc(item.title)}</h4><p>${esc(item.description)}</p></article>`).join(''); if (window.AOS) AOS.refresh(); } catch (error) { document.documentElement.dataset.nexusData = 'fallback'; } }; renderNexus();
   const renderSonicBridge = async () => { try { const sonic = await fetch('data/sonicbridge.json').then(response => response.json()); const highlights = $('#sonicbridge-highlights'); if (highlights) highlights.innerHTML = sonic.highlights.map((item, index) => `<article class="nexus-card"><h4>${esc(item)}</h4><div class="card-top"><span>${String(index + 1).padStart(2,'0')} / VERIFIED</span></div></article>`).join(''); const architecture = $('#sonicbridge-architecture'); if (architecture) architecture.innerHTML = sonic.architecture.map((item, index) => `${index ? '<span class="sonic-bridge-arrow">→</span>' : ''}<div class="sonic-arch-node"><i class="bi bi-${index === 0 ? 'tv' : index === 1 ? 'wifi' : index === 2 ? 'soundwave' : 'phone'}"></i><span>${esc(item.name)}</span><small>${esc(item.detail)}</small></div>`).join(''); const approach = $('#sonicbridge-approach'); if (approach) approach.innerHTML = sonic.approach.map((item, index) => `<article class="nexus-card"><div class="card-top"><span>${String(index + 1).padStart(2,'0')} / SYSTEM STEP</span><b>INTENTIONAL</b></div><h4>${esc(item.name)}</h4><p>${esc(item.detail)}</p></article>`).join(''); const why = $('#sonicbridge-why-copy'); if (why) why.textContent = sonic.why; const related = document.querySelector('.sonicbridge-related p'); if (related) related.textContent = sonic.related; if (window.AOS) AOS.refresh(); } catch (error) { document.documentElement.dataset.sonicbridgeData = 'fallback'; } }; renderSonicBridge();
+  fetch('data/projects.json').then(response => response.json()).then(projects => { portfolioProjects = [...projects, { id: 'digital-me', name: 'Digital Me', status: 'INTEGRATED AI EXPERIENCE', description: 'An AI-powered professional profile backed by the portfolio UI, a Supabase Edge Function, an OpenAI / LLM layer, and curated professional context.', role: 'Designed the conversational portfolio experience and its contextual project navigation surface.', challenge: 'Let recruiters inspect verified engineering experience conversationally without replacing the underlying portfolio content.', technologies: ['Supabase Edge Functions', 'OpenAI / LLM', 'Professional context', 'Computer-vision context'], href: '#digital-nizam', links: [{ label: 'Open Digital Me', href: '#digital-nizam', primary: true }] }]; decorateProjectCards(); buildConstellation(); }).catch(() => {});
 })();

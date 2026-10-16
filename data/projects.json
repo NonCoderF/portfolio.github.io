@@ -1,4 +1,36 @@
-[
+[{
+    "id": "ai-vision-ocr",
+    "name": "AI Vision — Intelligent OCR & Image Analysis",
+    "type": "React Native / TypeScript / AI application",
+    "status": "FLAGSHIP",
+    "version": "Expo + Supabase",
+    "description": "An AI-powered React Native application that turns captured images into meaningful, structured information through camera capture, image selection, Supabase-backed analysis, and a dynamic results experience.",
+    "role": "Built the mobile product surface with TypeScript, Expo, camera and image workflows, navigation, hooks, interactive loading/result states, and the integration path to Supabase-backed AI image analysis.",
+    "challenge": "Make an image-analysis workflow feel immediate and understandable across capture, gallery selection, remote analysis, structured response handling, and error states.",
+    "technologies": [
+      "React Native",
+      "TypeScript",
+      "Expo",
+      "Camera",
+      "Image gallery",
+      "Navigation",
+      "React Hooks",
+      "Supabase",
+      "AI image analysis",
+      "Dynamic DTOs",
+      "Animations",
+      "Bottom sheets"
+    ],
+    "href": "https://github.com/NonCoderF/Ocr",
+    "links": [
+      {
+        "label": "View OCR source",
+        "href": "https://github.com/NonCoderF/Ocr",
+        "primary": true
+      }
+    ],
+    "note": "Source-led presentation. No unverified screenshots or performance claims are included."
+  },
   {
     "id": "adaptive-exercise-recognition",
     "name": "Adaptive Exercise Recognition - Personalized ML Case Study",
@@ -32,8 +64,8 @@
   },
   {
     "id": "taporiai",
-    "name": "Tapori AI - Android & Flutter AI Chat Application",
-    "type": "Android + Flutter / AI Chat",
+    "name": "Tapori AI - Android, React Native & Flutter AI Chat Application",
+    "type": "Android + React Native + Flutter / AI Chat",
     "status": "FLAGSHIP",
     "version": "Flutter: master-flutter branch",
     "description": "An AI-powered conversational mobile application with contextual chat, authentication, credit management, payments, Supabase Edge Functions, and LLM integration. Originally built natively for Android and later migrated to Flutter while preserving Clean Architecture and backend contracts.",
@@ -58,6 +90,10 @@
         "label": "View Flutter Source",
         "href": "https://github.com/NonCoderF/tapori-ai",
         "primary": true
+      },
+      {
+        "label": "View React Native branch",
+        "href": "https://github.com/NonCoderF/tapori-ai/tree/react-native"
       },
       {
         "label": "View on Play Store",

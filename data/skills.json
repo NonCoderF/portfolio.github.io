@@ -1,13 +1,31 @@
 {
   "Mobile": [
     "Android",
+    "React Native",
     "Flutter",
     "Kotlin",
     "Dart",
     "Java",
     "Jetpack Compose",
     "Material 3",
-    "Android SDK"
+    "Android SDK",
+    "TypeScript",
+    "JavaScript",
+    "Expo",
+    "React Hooks"
+  ],
+  "React Native": [
+    "React Native",
+    "TypeScript",
+    "Expo",
+    "Navigation",
+    "FlatList",
+    "Camera and permissions",
+    "REST APIs",
+    "Supabase Edge Functions",
+    "Async programming",
+    "Component architecture",
+    "Testing and debugging"
   ],
   "Architecture": [
     "Clean Architecture",
