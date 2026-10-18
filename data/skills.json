@@ -1,83 +1,8 @@
 {
-  "Mobile": [
-    "Android",
-    "React Native",
-    "Flutter",
-    "Kotlin",
-    "Dart",
-    "Java",
-    "Jetpack Compose",
-    "Material 3",
-    "Android SDK",
-    "TypeScript",
-    "JavaScript",
-    "Expo",
-    "React Hooks"
-  ],
-  "React Native": [
-    "React Native",
-    "TypeScript",
-    "Expo",
-    "Navigation",
-    "FlatList",
-    "Camera and permissions",
-    "REST APIs",
-    "Supabase Edge Functions",
-    "Async programming",
-    "Component architecture",
-    "Testing and debugging"
-  ],
-  "Architecture": [
-    "Clean Architecture",
-    "MVVM",
-    "MVI",
-    "SOLID",
-    "Feature-first architecture",
-    "Modularization",
-    "Multi-module architecture",
-    "Repository pattern"
-  ],
-  "State & Async": [
-    "Riverpod",
-    "Coroutines",
-    "Flow",
-    "StateFlow",
-    "RxJava",
-    "Dart async/await"
-  ],
-  "Networking & Backend": [
-    "Dio",
-    "Retrofit",
-    "OkHttp",
-    "REST",
-    "GraphQL",
-    "Supabase",
-    "Firebase",
-    "Ktor",
-    "WebSockets"
-  ],
-  "AI": [
-    "OpenAI",
-    "LLM integration",
-    "Computer Vision",
-    "Pose / skeletal landmark detection",
-    "TensorFlow Lite",
-    "Android Sensors",
-    "Device Orientation APIs",
-    "Personalized model pipeline",
-    "Activity / exercise recognition",
-    "AI-assisted applications",
-    "Supabase Edge Functions",
-    "Prompt-driven features",
-    "RAG-style professional context"
-  ],
-  "Tooling": [
-    "Gradle",
-    "GitHub Actions",
-    "CI/CD",
-    "Android Profiler",
-    "Git",
-    "MCP",
-    "Developer tooling"
-  ]
+  "Android Development": ["Android", "Kotlin", "Java", "Jetpack Compose", "Material 3", "Android SDK", "Flutter", "Dart", "Riverpod", "Coroutines", "Flow", "StateFlow", "RxJava", "Dart async/await", "Android Profiler"],
+  "React Native": ["React Native", "TypeScript", "JavaScript", "Expo", "Navigation", "FlatList", "Camera and permissions", "React Hooks", "Async programming", "Component architecture", "Testing and debugging"],
+  "Architecture": ["Clean Architecture", "MVVM", "MVI", "SOLID", "Feature-first architecture", "Modularization", "Multi-module architecture", "Repository pattern", "Gradle", "Developer tooling", "MCP"],
+  "CI/CD & DevOps": ["Git", "GitHub", "GitHub Actions", "CI/CD", "Automated builds", "Release pipelines", "Version control", "Build automation", "Testing and debugging"],
+  "Jira & Collaboration": ["Jira", "Agile / Scrum", "Five-member Agile team", "Sprint planning", "Task tracking", "Bug management", "Confluence", "Technical documentation", "Release coordination"],
+  "Backend & APIs": ["Dio", "Retrofit", "OkHttp", "REST APIs", "GraphQL", "Supabase", "Firebase", "Ktor", "WebSockets", "Supabase Edge Functions", "OpenAI", "LLM integration", "AI-assisted applications", "Computer Vision", "TensorFlow Lite", "Android Sensors", "Device Orientation APIs", "Personalized model pipeline", "Activity / exercise recognition", "Prompt-driven features", "RAG-style professional context"]
 }

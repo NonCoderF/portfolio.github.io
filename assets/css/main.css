@@ -20,3 +20,10 @@
 @media(max-width:991px){.case-hero,.ml-upgrade,.personalization-panel,.lessons-panel{grid-template-columns:1fr}.case-snapshot{border-left:0;border-top:1px solid var(--line);padding-left:0;padding-top:20px}.case-grid,.lesson-grid,.details-grid{grid-template-columns:1fr}.mini-pipeline,.validation-flow,.learning-loop{grid-template-columns:1fr;overflow:visible}.mini-pipeline span,.validation-flow span,.learning-loop span{text-align:center;white-space:normal}.mini-pipeline i,.validation-flow i,.learning-loop i{transform:rotate(90deg)}}
 @media(max-width:767px){.case-hero,.pipeline-panel,.architecture-panel,.lessons-panel,.ml-upgrade,.personalization-panel,.case-details,.evolution-card{padding:20px}.case-principle{font-size:10px;display:flex}.logic-line{grid-template-columns:1fr}.logic-line b{font-size:14px}}
 @media(max-width:767px){body{padding-bottom:0!important}.assistant-shell{bottom:22px}}
+
+/* Skills hierarchy: delivery workflow is a first-class engineering capability. */
+.skill-card--workflow{border-color:rgba(0,245,255,.42);background:linear-gradient(145deg,rgba(0,245,255,.08),rgba(15,23,42,.5));box-shadow:inset 0 1px rgba(255,255,255,.05),0 0 24px rgba(0,245,255,.06)}
+.skill-card--workflow>i,.skill-card--workflow h3{color:var(--accent)}
+.skill-card--workflow .tag-row span{border-color:rgba(0,245,255,.24)}
+.skill-card--workflow .tag-row span:nth-child(-n+4){color:#e7ffff;border-color:rgba(0,245,255,.52);background:rgba(0,245,255,.07)}
+@media(max-width:767px){.skill-card--workflow{box-shadow:inset 0 1px rgba(255,255,255,.05)}}
