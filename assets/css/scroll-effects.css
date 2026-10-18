@@ -272,9 +272,10 @@ html {
 
 @media (max-width: 767px) {
   .assistant-shell.open .assistant-panel {
-    top: 12px;
+    top: max(12px, var(--assistant-viewport-offset-top, 0px));
     width: calc(100% - 24px);
-    height: calc(100dvh - 24px);
+    height: calc(var(--assistant-viewport-height, 100dvh) - 24px);
+    max-height: none;
   }
 
 }

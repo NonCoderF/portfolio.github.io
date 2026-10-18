@@ -203,6 +203,14 @@
   let assistantHistoryActive = false, assistantKeyboardOpen = false, assistantKeyboardDismissed = false, assistantDismissRequested = false, assistantFocusTimer = null;
   const reducedAssistantMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
   const mobileAssistant = () => matchMedia('(pointer: coarse)').matches || innerWidth <= 767;
+  const updateAssistantViewport = () => {
+    if (!assistant || !mobileAssistant()) return;
+    const viewport = window.visualViewport;
+    const height = viewport?.height || innerHeight;
+    const offsetTop = viewport?.offsetTop || 0;
+    assistant.style.setProperty('--assistant-viewport-height', `${height}px`);
+    assistant.style.setProperty('--assistant-viewport-offset-top', `${offsetTop}px`);
+  };
   const restoreAssistantHistory = () => history.pushState({ ...(history.state || {}), digitalMe: true }, '', window.location.href);
   const keyboardIsOpen = () => assistantKeyboardOpen && (window.visualViewport ? visualViewport.height < innerHeight - 80 : matchMedia('(pointer: coarse)').matches);
   assistantInput?.addEventListener('focus', () => { assistantKeyboardOpen = true; assistantKeyboardDismissed = false; });
@@ -222,9 +230,11 @@
     }, 80);
   });
   visualViewport?.addEventListener('resize', () => {
+    updateAssistantViewport();
     if (visualViewport.height < innerHeight - 80) {
       assistantKeyboardOpen = true;
       assistantKeyboardDismissed = false;
+      requestAnimationFrame(() => assistantInput?.scrollIntoView({ block: 'nearest', inline: 'nearest' }));
     } else if (assistant?.classList.contains('open')) {
       // The user used the OS keyboard-dismiss gesture. Do not immediately
       // focus the field again, but keep Digital Me open.
@@ -233,6 +243,9 @@
       clearTimeout(assistantFocusTimer);
     }
   }, { passive: true });
+  visualViewport?.addEventListener('scroll', updateAssistantViewport, { passive: true });
+  addEventListener('resize', updateAssistantViewport, { passive: true });
+  updateAssistantViewport();
   const finishAssistantClose = () => {
     clearTimeout(closeFallbackTimer);
     closeFallbackTimer = null;
