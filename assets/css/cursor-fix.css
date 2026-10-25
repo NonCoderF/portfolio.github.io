@@ -1,0 +1,17 @@
+/* Keep the custom pointer above page surfaces, overlays, and animated layers. */
+.cursor-dot,
+.cursor-ring {
+  position: fixed !important;
+  pointer-events: none !important;
+  transform: translate3d(-50%, -50%, 0);
+  will-change: left, top, transform;
+  mix-blend-mode: normal;
+}
+
+.cursor-ring {
+  z-index: 9999 !important;
+}
+
+.cursor-dot {
+  z-index: 10000 !important;
+}

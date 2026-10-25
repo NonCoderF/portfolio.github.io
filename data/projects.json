@@ -196,21 +196,47 @@
   {
     "id": "sonicbridge",
     "name": "SonicBridge",
-    "type": "Android TV / Audio Engineering",
-    "status": "RESEARCH",
-    "version": "Latest",
-    "description": "TV-to-mobile low-latency audio streaming over local Wi-Fi for private listening without cloud services or expensive dedicated hardware.",
-    "role": "Designed the Android TV capture-to-mobile playback system as an engineering case study.",
-    "challenge": "Capture Android TV audio, stream PCM over WebSockets, and play it on mobile through AudioTrack with practical buffering trade-offs.",
+    "type": "Android + Android TV + Web / Production release",
+    "status": "PUBLISHED",
+    "version": "Google Play + Vercel",
+    "description": "A published multi-platform audio streaming solution connecting Android phones, Android TV, and a companion web experience through local-network discovery, device communication, and low-latency audio delivery.",
+    "role": "Designed and shipped the Android TV capture-to-mobile playback experience, device connection flow, and companion web release.",
+    "challenge": "Make device discovery, socket communication, audio buffering, and reconnection feel dependable across Android and Android TV while keeping the web experience independently deployable.",
     "technologies": [
+      "Android",
       "Android TV",
+      "Web",
+      "Local Wi-Fi discovery",
+      "Socket communication",
       "AudioPlaybackCapture",
-      "WebSockets",
       "PCM audio",
       "AudioTrack",
-      "Local network streaming"
+      "Vercel"
     ],
-    "href": "#sonicbridge"
+    "href": "#sonicbridge",
+    "links": [
+      {
+        "label": "Download for Android",
+        "href": "https://play.google.com/store/apps/details?id=com.sparkstudios.sonicbridge",
+        "primary": true,
+        "icon": "google-play"
+      },
+      {
+        "label": "Download for Android TV",
+        "href": "https://play.google.com/store/apps/details?id=com.sparkstudios.sonicbridge.tv",
+        "icon": "tv"
+      },
+      {
+        "label": "Launch Web App",
+        "href": "https://sonicbridge-navy.vercel.app/",
+        "icon": "globe2"
+      },
+      {
+        "label": "Read case study",
+        "href": "#sonicbridge"
+      }
+    ],
+    "note": "Production release. Android and Android TV are published on Google Play; the web experience is deployed on Vercel."
   },
   {
     "id": "biometric-sdk",
