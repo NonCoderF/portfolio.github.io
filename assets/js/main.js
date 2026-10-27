@@ -47,16 +47,24 @@
 
   let lastScrollY = window.scrollY, scrollFrame = 0, scrollRange = 1;
   const updateScrollRange = () => { scrollRange = Math.max(1, document.documentElement.scrollHeight - innerHeight); };
+  const updateHeaderMetrics = () => {
+    if (header) document.documentElement.style.setProperty('--site-header-height', `${header.getBoundingClientRect().height}px`);
+  };
   function onScroll() {
     const y = window.scrollY;
     lastScrollY = y;
     header?.classList.toggle('scrolled', y > 20);
+    updateHeaderMetrics();
     backTop?.classList.toggle('visible', y > 600);
     if (!scrollFrame) scrollFrame = requestAnimationFrame(() => { document.documentElement.style.setProperty('--scroll-progress', `${Math.min(1, y / scrollRange)}`); document.documentElement.style.setProperty('--scroll-light-x', `${50 + Math.sin(y / 700) * 8}%`); scrollFrame = 0; });
   }
   addEventListener('scroll', onScroll, { passive: true });
-  addEventListener('resize', () => { updateScrollRange(); onScroll(); }, { passive: true });
-  if ('ResizeObserver' in window) new ResizeObserver(updateScrollRange).observe(document.body);
+  addEventListener('resize', () => { updateScrollRange(); updateHeaderMetrics(); onScroll(); }, { passive: true });
+  if ('ResizeObserver' in window) {
+    const layoutObserver = new ResizeObserver(() => { updateScrollRange(); updateHeaderMetrics(); });
+    layoutObserver.observe(document.body);
+    if (header) layoutObserver.observe(header);
+  }
   updateScrollRange();
   onScroll();
 
