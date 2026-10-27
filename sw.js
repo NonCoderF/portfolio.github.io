@@ -1,4 +1,4 @@
-const CACHE_NAME = 'digital-nizam-seo-v5';
+const CACHE_NAME = 'digital-nizam-seo-v6';
 const CORE = ['./','./index.html','./assets/css/main.css','./assets/css/futuristic.css','./assets/css/os.css','./assets/css/hero-cinematic.css','./assets/css/ocr-showcase.css','./assets/js/main.js','./assets/js/particles.js','./assets/js/darkmode.js','./data/projects.json','./data/skills.json','./data/ocr-showcase.html','./manifest.json','./offline.html'];
 self.addEventListener('install', event => event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(CORE)).then(() => self.skipWaiting())));
 self.addEventListener('activate', event => event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key)))).then(() => self.clients.claim())));
