@@ -1,12 +1,12 @@
 {
-  "name": "Nizamuddin Ali Ahmed - Senior Mobile Engineer Portfolio",
+  "name": "Nizamuddin Ali Ahmed - Software Engineer Portfolio",
   "short_name": "Digital Nizam",
   "start_url": "/portfolio.github.io/",
   "scope": "/portfolio.github.io/",
   "display": "standalone",
   "background_color": "#08090c",
   "theme_color": "#08090c",
-  "description": "Senior Mobile Engineer portfolio for Android, React Native, Expo, TypeScript, Clean Architecture, AI-powered applications, and production mobile systems.",
+  "description": "Software Engineer portfolio covering Android Native, Kotlin, Jetpack Compose, React Native, Node.js, web development, cloud services, and AI-powered applications.",
   "icons": [
     {
       "src": "assets/img/favicon.png",

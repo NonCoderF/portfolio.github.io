@@ -11,7 +11,7 @@
     if (specializationCard) specializationCard.querySelector('p').textContent = 'He specializes in Android, Kotlin, Jetpack Compose, React Native, TypeScript, Expo, Flutter, Dart, Clean Architecture, Android architecture, Mobile AI, LLM integration, Supabase, SDKs, and developer tooling.';
     if (!faqGrid.querySelector('[data-faq-react-native]')) faqGrid.insertAdjacentHTML('beforeend', '<article class="skill-card" data-faq-react-native><h3>What has he built with React Native?</h3><p>He built AI Vision, an AI-powered React Native OCR and image-analysis application using TypeScript, Expo, camera and gallery workflows, navigation, React Hooks, Supabase-backed AI analysis, dynamic structured responses, animations, bottom sheets, and loading, result, and error states.</p></article>');
   }
-  const heroKicker = $('.hero-kicker'); if (heroKicker) heroKicker.innerHTML = 'Senior Mobile Engineer <span class="slash">/</span> Android + React Native + AI';
+  const heroKicker = $('.hero-kicker'); if (heroKicker) heroKicker.innerHTML = 'Software Engineer <span class="slash">/</span> Android + React Native + AI';
   const heroDescription = $('.hero-description'); if (heroDescription) heroDescription.textContent = 'Building production mobile experiences across Android and React Native, with AI and real-world impact.';
 
   // Build the hero perimeter as an SVG stroke so the highlight follows the actual rounded panel.
@@ -81,7 +81,7 @@
   const closePalette = () => { if (palette) palette.hidden = true; };
   addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'k') { e.preventDefault(); openPalette(); } if (e.key === 'Escape') closePalette(); if (e.key.toLowerCase() === 'a' && document.activeElement !== input) { /* easter egg handled below */ } });
   palette?.addEventListener('click', e => { if (e.target === palette) closePalette(); });
-  const commands = { whoami: '#about', projects: '#work', skills: '#skills', contact: '#contact', github: 'https://github.com/NonCoderF', resume: 'assets/resume/resume.pdf', exercise: '#adaptive-exercise-recognition', sonicbridge: '#sonicbridge', software: '#software-engineering', research: '#ai-research-lab', hire: '#contact', clear: '#hero', help: '#contact' };
+  const commands = { whoami: '#about', projects: '#work', skills: '#skills', contact: '#contact', github: 'https://github.com/NonCoderF', resume: '/assets/resume/resume.pdf', exercise: '#adaptive-exercise-recognition', sonicbridge: '#sonicbridge', software: '#software-engineering', research: '#ai-research-lab', hire: '#contact', clear: '#hero', help: '#contact' };
   ['exercise','sonicbridge','software','research','hire'].forEach(command => $('.command-list')?.insertAdjacentHTML('beforeend', `<button data-command="${command}"><i class="bi bi-arrow-up-right"></i> ${command}</button>`)); $$('.command-list button').forEach(button => button.addEventListener('click', () => { const command = button.dataset.command, destination = commands[command]; closePalette(); if (!destination || command === 'clear') return window.scrollTo({ top: 0, behavior: 'smooth' }); if (destination.startsWith('http') || destination.endsWith('.pdf')) window.open(destination, '_blank', 'noopener'); else document.querySelector(destination)?.scrollIntoView({ behavior: 'smooth' }); }));
   input?.addEventListener('input', () => { const term = input.value.toLowerCase(); $$('.command-list button').forEach(button => button.hidden = !button.dataset.command.includes(term)); });
 
